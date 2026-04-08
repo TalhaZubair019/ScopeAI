@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ScopeAI: The Neural Workspace
 
-## Getting Started
+ScopeAI is an ultra-technical, high-fidelity project architect designed to transform vague technical visions into granular, actionable blueprints. It combines advanced LLM reasoning with spatial visualization to provide a "Neural Workspace" for modern builders.
 
-First, run the development server:
+## 🧠 Core Intelligence Systems
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### 1. Neural Flow Engine (Flowchart Visualization)
+*   **Ultra-Granular Mapping**: Generates 15-25 node architectural maps covering API endpoints, cache layers (Redis), queues (Kafka), and logic gates.
+*   **Simple Wording, Complex Logic**: Uses plain English labels (e.g., "Check if password is correct") to describe deep technical actions.
+*   **Interactive Spatial UI**: Supports **500% Deep Zoom**, momentum-based **Drag-to-Pan**, and **Immersive Full-Screen** modes for technical audits.
+*   **High-Fidelity Export**: Download specific architectural iterations as standard SVG files.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Sequential Timeline Scheduler
+*   **Monday-Friday Logic**: Implements a strict "Skip Weekends" engine that ensures all tasks fall on business days.
+*   **Working-Day Precision**: Automatically calculates the total project duration by summing actual effort, excluding weekends from the cumulative count.
+*   **Linear Dependencies**: Recalculates the entire timeline sequentially to ensure no overlapping task hallucinations.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. The "Neural Healer" (Backend Integrity)
+*   **Self-Repairing Syntax**: A robust backend auto-fix system that intercepts and repairs common AI Mermaid.js hallucinations (malformed arrows, unquoted labels, redundant graph headers).
+*   **Lexer Guard**: Forces double-quoting on all node labels to prevent parser crashes from special characters.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠 Tech Stack
 
-## Learn More
+*   **Framework**: Next.js 15 (App Router / Turbopack)
+*   **Intelligence**: Groq API (Llama-3.3-70b-versatile)
+*   **Visualization**: Mermaid.js 11.14.0
+*   **Animations**: Framer Motion
+*   **Styling**: Tailwind CSS v4 + Vanilla CSS 
+*   **Design System**: Spatial Neural Aesthetics (Glassmorphism, Indigo Glows, Dark Mode)
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Getting Started
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1.  **Clone the Repository**
+2.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Configure Environment**:
+    Create a `.env` file in the root directory:
+    ```env
+    GROQ_API_KEY=your_key_here
+    ```
+4.  **Launch the Workspace**:
+    ```bash
+    npm run dev
+    ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*Crafted with precision for builders. Powered by ScopeAI Intelligence.*
