@@ -16,6 +16,7 @@ import { Task } from "@/lib/types";
 
 interface TaskTimelineProps {
   tasks: Task[];
+  totalDays?: number;
 }
 
 const getTaskIcon = (index: number) => {
@@ -30,7 +31,7 @@ const getTaskIcon = (index: number) => {
   return icons[index % icons.length];
 };
 
-const TaskTimeline: React.FC<TaskTimelineProps> = ({ tasks }) => {
+const TaskTimeline: React.FC<TaskTimelineProps> = ({ tasks, totalDays }) => {
   return (
     <div className="w-full relative py-8">
       {/* Connector Line */}
@@ -108,13 +109,23 @@ const TaskTimeline: React.FC<TaskTimelineProps> = ({ tasks }) => {
 
       {/* End Node */}
       <motion.div
-        initial={{ scale: 0 }}
-        whileInView={{ scale: 1 }}
-        className="mt-20 flex justify-center"
+        initial={{ opacity: 0, scale: 0 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        className="mt-20 flex flex-col items-center justify-center gap-6"
       >
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center animate-spin-slow">
+        <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center animate-spin-slow shadow-[0_0_30px_rgba(255,255,255,0.03)]">
           <Circle className="w-4 h-4 text-slate-700" />
         </div>
+        
+        {totalDays && totalDays > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest shadow-[0_0_25px_rgba(99,102,241,0.2)] backdrop-blur-md"
+          >
+            Progressive Timeline: {totalDays} Working Days
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );

@@ -42,6 +42,7 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
     new Date().toISOString().split("T")[0],
   );
   const [skipWeekends, setSkipWeekends] = useState(false);
+  const [totalDays, setTotalDays] = useState(0);
 
   useEffect(() => {
     if (initialProject) {
@@ -85,6 +86,7 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
       } else {
         setTasks(data.tasks || []);
         setFlowchart(data.flowchart || "");
+        setTotalDays(data.totalDays || 0);
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -305,7 +307,7 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
               </button>
             </div>
 
-            <TaskTimeline tasks={tasks} />
+            <TaskTimeline tasks={tasks} totalDays={totalDays} />
 
             {/* Architecture Flowchart Section */}
             <div className="w-full mt-24">
@@ -313,15 +315,17 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
                 <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
                   <LayoutGrid className="w-5 h-5 text-purple-400" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white tracking-tight leading-none mb-1">
-                    Flow Analysis
-                  </h3>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="text-xl font-bold text-white tracking-tight leading-none">
+                      Flow Analysis
+                    </h3>
+                  </div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">
                     Architectural Visualization v4.2
                   </p>
                 </div>
-                <div className="h-px flex-1 bg-white/5 ml-4" />
+                <div className="h-px flex-[0.5] bg-white/5 ml-4" />
               </div>
 
               {flowchart ? (

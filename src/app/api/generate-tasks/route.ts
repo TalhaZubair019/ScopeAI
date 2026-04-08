@@ -54,9 +54,13 @@ export async function POST(req: NextRequest) {
       If Skip Weekends is ENABLED, you MUST NOT assign any task a due_date that falls on a Saturday or Sunday. If a task would naturally fall on a weekend, push it to the next Monday.
 
       FLOWCHART INSTRUCTION:
-      Generate a HIGHLY DETAILED technical Mermaid.js flowchart (graph LR).
-      - **GRANULAR DETAIL**: Show logic gates, data transitions, and granular steps.
-      - **SIMPLE WORDING**: Use plain English (e.g., "Check Login" NOT "Auth Logic").
+      Generate an ULTRA-DETAILED technical Mermaid.js flowchart (graph LR).
+      - **GRANULAR ARCHITECTURE**: Show every single logical step, specialized database tables, cache layers, and message queues.
+      - **HUMAN-LEVEL WORDING**: Use simple, plain English for every node label. Avoid jargon.
+        - Correct: "Check if password is correct" (NOT "Hash Comparison")
+        - Correct: "Save user info to database" (NOT "Persistence Layer")
+        - Correct: "Ask if user is an admin" (NOT "Role-Based Access Control")
+      - **HIGH DENSITY**: For complex requests, generate 15-25 nodes to show the full, granular journey.
       - Use 'graph LR' ONLY.
       - **STRICT LABELS**: EVERY node label MUST be in double quotes inside brackets/braces.
         - Node: ID["Label Text"]
@@ -165,6 +169,7 @@ export async function POST(req: NextRequest) {
         }
 
         // --- ROBUST SEQUENTIAL DATE CALCULATION ---
+        let totalWorkingDays = 0;
         if (parsed.tasks && Array.isArray(parsed.tasks)) {
           let trackingDate = new Date(currentStartDate);
           
@@ -186,16 +191,18 @@ export async function POST(req: NextRequest) {
             task.due_date = trackingDate.toISOString().split("T")[0];
 
             // Calculate duration to increment for the NEXT task
-            // We'll parse the duration string (e.g. "2 days", "1 week")
             let durationDays = 1;
             if (task.duration) {
               const match = task.duration.match(/(\d+)/);
               if (match) {
                 durationDays = parseInt(match[1]);
-                if (task.duration.toLowerCase().includes("week")) durationDays *= 5; // Working days
-                if (task.duration.toLowerCase().includes("month")) durationDays *= 20; // Working days
+                if (task.duration.toLowerCase().includes("week")) durationDays *= 5; 
+                if (task.duration.toLowerCase().includes("month")) durationDays *= 20;
               }
             }
+            
+            // Add to the running total of working days
+            totalWorkingDays += durationDays;
 
             // Increment trackingDate based on duration
             for (let i = 0; i < durationDays; i++) {
@@ -207,7 +214,7 @@ export async function POST(req: NextRequest) {
           });
         }
   
-        return NextResponse.json(parsed);
+        return NextResponse.json({ ...parsed, totalDays: totalWorkingDays });
       } catch (parseError) {
       console.error("JSON parsing error:", parseError, content);
       return NextResponse.json(
