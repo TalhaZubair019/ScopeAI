@@ -903,7 +903,7 @@ const ChatInterface: React.FC = () => {
                     )}
                   >
                     <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest pl-1">
-                      {isLoading ? "Syncing..." : "Verify Intelligence"}
+                      {isLoading ? "Syncing..." : "Send"}
                     </span>
                     <Send
                       className={cn("w-4 h-4", isLoading && "animate-pulse")}

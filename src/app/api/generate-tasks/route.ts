@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Task } from "@/lib/types";
 
 export const runtime = "edge";
 
@@ -55,19 +54,20 @@ export async function POST(req: NextRequest) {
       If Skip Weekends is ENABLED, you MUST NOT assign any task a due_date that falls on a Saturday or Sunday. If a task would naturally fall on a weekend, push it to the next Monday.
 
       FLOWCHART INSTRUCTION:
-      Generate a HIGHLY DETAILED technical Mermaid.js flowchart (graph TD) that visualizes the architectural and systemic flow of the system described. 
-      Use SIMPLE AND CLEAR wording for all node labels so they are easy to understand. Avoid overly complex jargon.
-      Break the diagram into logical clusters/layers (e.g., [User Interface], [Server API], [Business Logic], [Database], [Cloud Services]).
-      Include specific technology nodes based on the user's requirements (e.g., [Next.js], [Database Storage]).
-      Use decision diamonds for logic gates (e.g., {Logged In?}) and ensure the flowchart captures the implementation flow.
+      Generate a HIGHLY DETAILED technical Mermaid.js flowchart (graph LR).
+      - **GRANULAR DETAIL**: Show logic gates, data transitions, and granular steps.
+      - **SIMPLE WORDING**: Use plain English (e.g., "Check Login" NOT "Auth Logic").
+      - Use 'graph LR' ONLY.
+      - **STRICT LABELS**: EVERY node label MUST be in double quotes inside brackets/braces.
+        - Node: ID["Label Text"]
+        - Decision: ID{"Question?"}
+      - ORGANIZE into systematic subgraphs with double-quoted titles.
       
-      SYNTAX RULES:
-      - Use standard Mermaid 10.x syntax.
-      - For labeled arrows, use: A -->|Label Text| B (NOT A -->|Label Text|> B).
-      - Ensure node IDs (if used) are simple alphanumeric strings; use brackets for labels with spaces: e.g., Node1[Text with Spaces].
-      - For subgraphs, always use double quotes for the title: subgraph "Title Name" (NOT subgraph [Title Name]).
-      - Every subgraph MUST end with a newline followed by the literal keyword 'end' on its own line. (NOT endsubgraph).
-      - Avoid special characters like parentheses or brackets inside node labels unless properly quoted if necessary.
+      SYNTAX RULES (STRICT):
+      - NO special characters outside of labels.
+      - NO parentheses '()' or single brackets '[]' unless the label inside is double-quoted.
+      - For labeled arrows: A -->|Label Text| B.
+      - Subgraph: subgraph "Title"\n ... \nend
 
       For each task, provide:
       1. task_name: A concise title (max 5-7 words).
@@ -124,16 +124,91 @@ export async function POST(req: NextRequest) {
       content = content.replace(/```json\n?/, "").replace(/```$/, "");
     }
 
-    try {
-      const parsed = JSON.parse(content);
+      try {
+        const parsed = JSON.parse(content);
+  
+        // Auto-fix common Mermaid syntax hallucinations
+        if (parsed.flowchart) {
+          let chart = parsed.flowchart
+            .replace(/```mermaid\n?/g, "") // Remove stray markdown markers
+            .replace(/```/g, "")
+            .replace(/\|>\s*/g, "| ") // Fix labeled arrows hallucination
+            .replace(/endsubgraph/g, "\nend") // Fix non-existent keyword
+            .replace(/([a-zA-Z0-9\]\)])\s*(end)\b/g, "$1\n$2") // Ensure newline before end keyword
+            .replace(/subgraph\s+\[(.*?)\]/g, 'subgraph "$1"') // Fix subgraph bracket hallucination
+            .replace(/subgraph\s+([^\n"]+)\n/g, 'subgraph "$1"\n') // Ensure quotes for unquoted subgraph titles
+            .replace(/-->\s*\|([^|]+)\|\s*>/g, "-->|$1|") // Fix malformed arrowheads
+            .replace(/\|"([^"]+)"\|/g, "|$1|") // Fix invalid quotes inside pipes
+            .replace(/-->\s*"([^"]+)"/g, '--> ["$1"]') // Fix quotes used as nodes without brackets
+            .replace(/\{([^{}]+)\}/g, (match: string, p1: string) => {
+              if (p1.startsWith('"') && p1.endsWith('"')) return match;
+              return `{"${p1}"}`; // Force quotes inside diamonds
+            })
+            .replace(/\[([^\[\]]+)\]/g, (match: string, p1: string) => {
+              if (p1.startsWith('"') && p1.endsWith('"')) return match;
+              if (match.startsWith("subgraph")) return match;
+              return `["${p1}"]`; // Force quotes inside boxes
+            });
 
-      // Auto-fix common Mermaid syntax hallucinations (e.g., |Text|> B instead of |Text| B)
-      if (parsed.flowchart) {
-        parsed.flowchart = parsed.flowchart.replace(/\|>\s*/g, "| ");
-      }
+          // --- STRIP MULTIPLE GRAPH HEADERS ---
+          // Find the first instance of 'graph LR' or 'graph TD' and remove any others
+          const graphHeaderMatch = chart.match(/graph\s+(LR|TD|RL|BT)/i);
+          if (graphHeaderMatch) {
+            const header = graphHeaderMatch[0];
+            chart = chart.replace(/graph\s+(LR|TD|RL|BT)/gi, ""); // Remove all
+            chart = header + "\n" + chart; // Add back one at the top
+          } else {
+            chart = "graph LR\n" + chart; // Force LR if missing
+          }
 
-      return NextResponse.json(parsed);
-    } catch (parseError) {
+          parsed.flowchart = chart.trim();
+        }
+
+        // --- ROBUST SEQUENTIAL DATE CALCULATION ---
+        if (parsed.tasks && Array.isArray(parsed.tasks)) {
+          let trackingDate = new Date(currentStartDate);
+          
+          parsed.tasks = parsed.tasks.map((task: any) => {
+            // Helper to skip weekends
+            const skipIfWeekend = (d: Date) => {
+              if (!skipWeekends) return;
+              let day = d.getUTCDay();
+              while (day === 6 || day === 0) { // Saturday or Sunday
+                d.setUTCDate(d.getUTCDate() + 1);
+                day = d.getUTCDay();
+              }
+            };
+
+            // Ensure we start on a working day
+            skipIfWeekend(trackingDate);
+
+            // Assign the date
+            task.due_date = trackingDate.toISOString().split("T")[0];
+
+            // Calculate duration to increment for the NEXT task
+            // We'll parse the duration string (e.g. "2 days", "1 week")
+            let durationDays = 1;
+            if (task.duration) {
+              const match = task.duration.match(/(\d+)/);
+              if (match) {
+                durationDays = parseInt(match[1]);
+                if (task.duration.toLowerCase().includes("week")) durationDays *= 5; // Working days
+                if (task.duration.toLowerCase().includes("month")) durationDays *= 20; // Working days
+              }
+            }
+
+            // Increment trackingDate based on duration
+            for (let i = 0; i < durationDays; i++) {
+              trackingDate.setUTCDate(trackingDate.getUTCDate() + 1);
+              skipIfWeekend(trackingDate);
+            }
+
+            return task;
+          });
+        }
+  
+        return NextResponse.json(parsed);
+      } catch (parseError) {
       console.error("JSON parsing error:", parseError, content);
       return NextResponse.json(
         { error: "AI returned invalid JSON" },
