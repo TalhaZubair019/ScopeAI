@@ -1,50 +1,73 @@
-# ScopeAI: The Neural Workspace
+# ScopeAI
 
-ScopeAI is an ultra-technical, high-fidelity project architect designed to transform vague technical visions into granular, actionable blueprints. It combines advanced LLM reasoning with spatial visualization to provide a "Neural Workspace" for modern builders.
-
-## 🧠 Core Intelligence Systems
-
-### 1. Neural Flow Engine (Flowchart Visualization)
-*   **Ultra-Granular Mapping**: Generates 15-25 node architectural maps covering API endpoints, cache layers (Redis), queues (Kafka), and logic gates.
-*   **Simple Wording, Complex Logic**: Uses plain English labels (e.g., "Check if password is correct") to describe deep technical actions.
-*   **Interactive Spatial UI**: Supports **500% Deep Zoom**, momentum-based **Drag-to-Pan**, and **Immersive Full-Screen** modes for technical audits.
-*   **High-Fidelity Export**: Download specific architectural iterations as standard SVG files.
-
-### 2. Sequential Timeline Scheduler
-*   **Monday-Friday Logic**: Implements a strict "Skip Weekends" engine that ensures all tasks fall on business days.
-*   **Working-Day Precision**: Automatically calculates the total project duration by summing actual effort, excluding weekends from the cumulative count.
-*   **Linear Dependencies**: Recalculates the entire timeline sequentially to ensure no overlapping task hallucinations.
-
-### 3. The "Neural Healer" (Backend Integrity)
-*   **Self-Repairing Syntax**: A robust backend auto-fix system that intercepts and repairs common AI Mermaid.js hallucinations (malformed arrows, unquoted labels, redundant graph headers).
-*   **Lexer Guard**: Forces double-quoting on all node labels to prevent parser crashes from special characters.
-
-## 🛠 Tech Stack
-
-*   **Framework**: Next.js 15 (App Router / Turbopack)
-*   **Intelligence**: Groq API (Llama-3.3-70b-versatile)
-*   **Visualization**: Mermaid.js 11.14.0
-*   **Animations**: Framer Motion
-*   **Styling**: Tailwind CSS v4 + Vanilla CSS 
-*   **Design System**: Spatial Neural Aesthetics (Glassmorphism, Indigo Glows, Dark Mode)
-
-## 🚀 Getting Started
-
-1.  **Clone the Repository**
-2.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
-3.  **Configure Environment**:
-    Create a `.env` file in the root directory:
-    ```env
-    GROQ_API_KEY=your_key_here
-    ```
-4.  **Launch the Workspace**:
-    ```bash
-    npm run dev
-    ```
+**ScopeAI** is a high-fidelity, multimodal project architect designed for engineers and product builders. It bridge the gap between abstract technical visions and production-ready blueprints through spatial visualization and advanced LLM reasoning.
 
 ---
 
-*Crafted with precision for builders. Powered by ScopeAI Intelligence.*
+## 🧠 Core Intelligence Modules
+
+### 1. Flow Engine (Architectural Mapping)
+
+- **Ultra-Granular Logic**: Generates deep-dive Mermaid.js maps (LR graph) encompassing API endpoints, specialized database schemas, cache layers (Redis/Memcached), and message queues (Kafka).
+- **Human-Technical Balance**: Every logical node is labeled in plain English (e.g., "Check if password matches") to ensure readability without sacrificing architectural depth.
+- **Spatial Controls**:
+  - **Deep Technical Inspection**: 500% zoom capability.
+  - **Fluid Navigation**: Momentum-based drag-to-pan and immersive full-screen mode.
+  - **Export Pipeline**: High-fidelity SVG downloading for documentation.
+
+### 2. Multi-Modal Chat
+
+- **Vision-Based Diagnosis**: Upload UI screenshots for instantaneous code generation and architectural analysis.
+- **Document Auditing**: Process technical specs (PDF/Text) to identify structural bottlenecks.
+- **Re-edit**: Edit previously sent messages to "Overwrite" history, allowing for recursive prompt refinement and precision re-generation.
+- **Technical Presentation**: Integrated Syntax Highlighters (VSC Dark Plus) with secure clipboard management.
+
+### 3. Sequential Timeline Scheduler
+
+- **Business-Day Calibration**: A strict "Skip Weekends" engine ensures project milestones never fall on non-working days.
+- **Sequential Logic Engine**: Recalculates entire timelines to prevent date overlapping and scheduling hallucinations.
+- **Working-Day Aggregation**: Displays the "Progressive Timeline" badge showing only the total business-day effort required.
+
+### 4. Persistence & Artifact Archiving
+
+- **Blueprint Storage**: Archive generated plans (tasks + flowcharts) into a persistent database.
+- **Artifact Quick-Recall**: Seamlessly restore historic architectures from the "Recent Artifacts" browser directly into the workspace.
+
+---
+
+## 🛡 System Resilience (The "Healer")
+
+ScopeAI features a multi-layer backend auto-fix system to ensure high-fidelity output:
+
+- **Syntax Self-Repair**: Automatically detects and fixes malformed Mermaid.js markers, redundant graph headers, and unquoted labels.
+- **Date Audit Engine**: Intercepts AI-generated math errors to enforce strict calendar compliance.
+- **JSON Hardening**: Scrubbing logic for stray markdown literals that often plague LLM-based structured outputs.
+
+---
+
+## 🛠 Tech Stack
+
+- **Architecture**: Next.js 15 (App Router, Turbopack)
+- **Core Intelligence**: Groq Llama-3.3-70b-versatile
+- **Visualization**: Mermaid.js 11.14.0
+- **Animations**: Framer Motion 12+
+- **Persistence**: Integrated API routes with MongoDB support
+- **Styling**: Tailwind CSS v4 + Vanilla CSS
+
+---
+
+## 🚀 Deployment & Setup
+
+1.  **Clone Repository**
+2.  **Dependencies**: `npm install`
+3.  **Environment Configuration**:
+    Create `.env.local`:
+    ```env
+    GROQ_API_KEY=your_key_here
+    MONGODB_URI=your_mongo_uri_here
+    ```
+4.  **Launch Workspace**: `npm run dev`
+
+---
+
+_Crafted with precision for builders. Powered by ScopeAI Intelligence._
