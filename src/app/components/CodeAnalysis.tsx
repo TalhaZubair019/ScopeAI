@@ -922,16 +922,19 @@ export default function CodeAnalysis() {
                 )}
 
                 {isInputExpanded && (
-                  <div className="flex flex-col flex-1 gap-2">
-                    <input
-                      type="text"
-                      value={customLogic}
-                      onChange={(e) => setCustomLogic(e.target.value)}
-                      placeholder="Custom Validation Rules (Optional)..."
-                      className="w-full bg-transparent border-none outline-none focus:ring-0 text-amber-500/80 placeholder-slate-700 text-xs font-mono py-1"
-                      disabled={isAnalyzing}
-                    />
-                    <div className="h-px bg-white/5 w-full" />
+                  <div className="flex flex-col flex-1 gap-2 pt-1">
+                    <div className="flex items-center gap-2 group/logic px-1">
+                      <Edit3 className="w-3 h-3 text-amber-500/50 group-focus-within/logic:text-amber-500 transition-colors" />
+                      <input
+                        type="text"
+                        value={customLogic}
+                        onChange={(e) => setCustomLogic(e.target.value)}
+                        placeholder="Custom Validation Rules (Optional)..."
+                        className="w-full bg-transparent border-none outline-none focus:ring-0 text-amber-500/80 placeholder-slate-700 text-xs font-mono py-1"
+                        disabled={isAnalyzing}
+                      />
+                    </div>
+                    <div className="h-px bg-linear-to-r from-white/10 via-white/5 to-transparent w-full" />
                     <textarea
                       ref={textareaRef}
                       value={input}
