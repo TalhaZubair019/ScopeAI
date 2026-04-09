@@ -385,8 +385,8 @@ const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto h-[750px] flex flex-col relative px-4 md:px-0">
-      <div className="flex-1 flex flex-col bg-[#050505] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+    <div className="w-full h-[calc(100vh-64px)] flex flex-col relative">
+      <div className="flex-1 flex flex-col bg-[#050505] overflow-hidden">
         <div className="flex flex-col md:flex-row h-full">
           <div className="hidden lg:flex w-72 border-r border-white/5 bg-[#080808] flex-col p-6 space-y-6">
             <div className="space-y-4">
