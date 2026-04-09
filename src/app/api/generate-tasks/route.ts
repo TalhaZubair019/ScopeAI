@@ -144,6 +144,8 @@ export async function POST(req: NextRequest) {
             .replace(/-->\s*\|([^|]+)\|\s*>/g, "-->|$1|") // Fix malformed arrowheads
             .replace(/\|"([^"]+)"\|/g, "|$1|") // Fix invalid quotes inside pipes
             .replace(/-->\s*"([^"]+)"/g, '--> ["$1"]') // Fix quotes used as nodes without brackets
+            .replace(/\]\s*\{/g, "{") // Fix stacked shapes: ID["Label"]{"Label"} -> ID{"Label"}
+            .replace(/\}\s*\[/g, "[") // Fix stacked shapes: ID{"Label"}["Label"] -> ID["Label"]
             .replace(/\{([^{}]+)\}/g, (match: string, p1: string) => {
               if (p1.startsWith('"') && p1.endsWith('"')) return match;
               return `{"${p1}"}`; // Force quotes inside diamonds

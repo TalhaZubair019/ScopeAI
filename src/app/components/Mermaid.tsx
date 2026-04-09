@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
-import { Download, Check, ZoomIn, ZoomOut, Maximize, Expand, Minimize } from "lucide-react";
+import { Download, Check, ZoomIn, ZoomOut, Maximize, Expand, Minimize, FileJson, Loader2 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 mermaid.initialize({
   startOnLoad: true,
@@ -34,6 +36,7 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [downloaded, setDownloaded] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [scale, setScale] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -139,6 +142,52 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
     setTimeout(() => setDownloaded(false), 2000);
   };
 
+  const handleDownloadPDF = async () => {
+    if (!ref.current) return;
+    const svg = ref.current.querySelector("svg");
+    if (!svg) return;
+
+    setIsExportingPDF(true);
+
+    try {
+      // Create a temporary container for high-fidelity capture
+      const clone = ref.current.cloneNode(true) as HTMLDivElement;
+      clone.style.position = "fixed";
+      clone.style.top = "-9999px";
+      clone.style.left = "-9999px";
+      clone.style.width = "auto";
+      clone.style.height = "auto";
+      clone.style.background = "#020617"; // Match tertiaryColor theme
+      document.body.appendChild(clone);
+
+      const canvas = await html2canvas(clone, {
+        backgroundColor: "#020617",
+        scale: 2, // High resolution
+        logging: false,
+        useCORS: true,
+      });
+
+      document.body.removeChild(clone);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+        unit: "px",
+        format: [canvas.width / 2, canvas.height / 2],
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`scopeai-architecture-${Date.now()}.pdf`);
+      
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 2000);
+    } catch (err) {
+      console.error("PDF Export Error:", err);
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
   return (
     <div 
       ref={wrapperRef} 
@@ -183,22 +232,42 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
             </div>
           </div>
 
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600/90 border border-indigo-400/50 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-indigo-500 hover:scale-105 transition-all backdrop-blur-md shadow-[0_0_20px_rgba(99,102,241,0.3)] outline-hidden cursor-pointer"
-          >
-            {downloaded ? (
-              <>
-                <Check className="w-3.5 h-3.5" />
-                <span>Saved</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-3.5 h-3.5" />
-                <span>Download SVG</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/10 transition-all backdrop-blur-md outline-hidden cursor-pointer"
+            >
+              {downloaded ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Saved</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>SVG</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isExportingPDF}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600/90 border border-indigo-400/50 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-indigo-500 hover:scale-105 transition-all backdrop-blur-md shadow-[0_0_20px_rgba(99,102,241,0.3)] outline-hidden cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isExportingPDF ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <FileJson className="w-3.5 h-3.5" />
+                  <span>PDF</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
