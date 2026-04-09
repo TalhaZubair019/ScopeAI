@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchGroq } from "@/lib/groq";
 
 export const runtime = "edge";
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,15 +11,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "No code or file provided for analysis" },
         { status: 400 }
-      );
-    }
-
-    const apiKey1 = process.env.GROQ_API_KEY;
-    const apiKey2 = process.env.GROQ_API_KEY_2;
-    if (!apiKey1 && !apiKey2) {
-      return NextResponse.json(
-        { error: "Missing GROQ API keys in environment" },
-        { status: 500 }
       );
     }
 
@@ -73,58 +63,22 @@ export async function POST(req: NextRequest) {
       systemPrompt += `\n\n**USER'S CUSTOM VALIDATION LOGIC**:\nYou MUST enforce these specific rules provided by the user:\n"${customLogic}"\nEnsure these custom directives are heavily weighted in your final scores and findings!`;
     }
 
-    const fetchPayload = {
-      model: "llama-3.3-70b-versatile", // Valid Groq model for deep analysis
+    const data = await fetchGroq({
+      model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: `Please analyze this code architecture and provide a deep audit report:\n\n${searchContent}` },
       ],
-      temperature: 0.5, // Lower temperature for more analytical output
-    };
-
-    let activeKey = apiKey1 || apiKey2;
-    let response = await fetch(GROQ_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${activeKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(fetchPayload),
+      temperature: 0.5,
     });
 
-    if (!response.ok) {
-      if (response.status === 429 && apiKey1 && apiKey2) {
-        console.warn("GROQ API Rate Limit Hit! Switching to backup API key...");
-        activeKey = apiKey2;
-        response = await fetch(GROQ_API_URL, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${activeKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(fetchPayload),
-        });
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Groq API error:", errorData);
-        return NextResponse.json(
-          { error: "Failed to connect to Audit Engine" },
-          { status: 502 }
-        );
-      }
-    }
-
-    const data = await response.json();
     const content = data.choices[0].message.content;
-
     return NextResponse.json({ analysis: content });
-  } catch (error) {
-    console.error("Server error:", error);
+  } catch (error: any) {
+    console.error("Audit error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: error.message || "Audit Engine failure" },
+      { status: 502 }
     );
   }
 }

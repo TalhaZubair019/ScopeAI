@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchGroq } from "@/lib/groq";
 
 export const runtime = "edge";
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,14 +11,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Prompt is required" },
         { status: 400 }
-      );
-    }
-
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Missing GROQ_API_KEY in environment" },
-        { status: 500 }
       );
     }
 
@@ -94,33 +85,23 @@ export async function POST(req: NextRequest) {
       }
     `;
 
-    const response = await fetch(GROQ_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile", // High performance model
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" }, // Enforce JSON if supported by model/API
-      }),
+    const data = await fetchGroq({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" },
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Groq API error:", errorData);
+    if (!data || !data.choices || data.choices.length === 0) {
       return NextResponse.json(
         { error: "Failed to generate tasks from AI provider" },
         { status: 502 }
       );
     }
 
-    const data = await response.json();
     let content = data.choices[0].message.content;
 
     // Sometimes LLMs wrap JSON in markdown blocks

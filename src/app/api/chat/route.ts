@@ -4,10 +4,9 @@ import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { PDFParse } from "pdf-parse";
 import { fetchWebContent } from "@/lib/webReader";
+import { fetchGroq } from "@/lib/groq";
 
 export const runtime = "nodejs";
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 async function parseDocument(attachment: ChatAttachment): Promise<string> {
   try {
@@ -54,9 +53,6 @@ export async function POST(req: NextRequest) {
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
     }
-
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 500 });
 
     const lastMessage = messages[messages.length - 1];
     const attachments = lastMessage.attachments || [];
@@ -119,27 +115,12 @@ export async function POST(req: NextRequest) {
     - Use clear, professional documentation in your responses.
     - Always prioritize structural integrity in your logic.`;
 
-    const groqResponse = await fetch(GROQ_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "system", content: systemPrompt }, ...formattedMessages],
-        temperature: 0.5,
-        max_tokens: 2048,
-      }),
+    const data = await fetchGroq({
+      model,
+      messages: [{ role: "system", content: systemPrompt }, ...formattedMessages],
+      temperature: 0.5,
+      max_tokens: 2048,
     });
-
-    if (!groqResponse.ok) {
-      const err = await groqResponse.json();
-      console.error("Groq Error:", err);
-      return NextResponse.json({ error: "AI Link Interrupted" }, { status: 502 });
-    }
-
-    const data = await groqResponse.json();
     const assistantMessage = data.choices[0].message;
 
     // Persist to DB
@@ -153,23 +134,15 @@ export async function POST(req: NextRequest) {
       if (!newTitle) {
         try {
           //Title Generation: Summarize the initial inquiry
-          const titleRes = await fetch(GROQ_API_URL, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "llama-3.1-8b-instant",
-              messages: [
-                { role: "system", content: "Create a 3-5 word technical title for this prompt. Return ONLY the title. No quotes." },
-                { role: "user", content: messages[0].content }
-              ],
-              max_tokens: 20,
-              temperature: 0.3,
-            }),
+          const titleData = await fetchGroq({
+            model: "llama-3.1-8b-instant",
+            messages: [
+              { role: "system", content: "Create a 3-5 word technical title for this prompt. Return ONLY the title. No quotes." },
+              { role: "user", content: messages[0].content }
+            ],
+            max_tokens: 20,
+            temperature: 0.3,
           });
-          const titleData = await titleRes.json();
           newTitle = titleData.choices[0].message.content.trim() || "Intellectual Session";
         } catch (e) {
           newTitle = messages[0].content.slice(0, 30) + "...";
