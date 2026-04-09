@@ -146,6 +146,7 @@ export default function CodeAnalysis() {
   const [sessionToDelete, setSessionToDelete] =
     useState<CodeAuditSession | null>(null);
   const [isInputExpanded, setIsInputExpanded] = useState(false);
+  const [customLogic, setCustomLogic] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -178,6 +179,7 @@ export default function CodeAnalysis() {
     setPendingFile(null);
     setError(null);
     setIsInputExpanded(false);
+    setCustomLogic("");
   };
 
   const loadSession = (session: CodeAuditSession) => {
@@ -187,6 +189,7 @@ export default function CodeAnalysis() {
     setPendingFile(null);
     setError(null);
     setIsInputExpanded(false);
+    setCustomLogic("");
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,6 +236,7 @@ export default function CodeAnalysis() {
     try {
       const payload = {
         code: userMessage.content,
+        customLogic: customLogic,
         file: userMessage.attachments?.[0]
           ? {
               name: userMessage.attachments[0].name,
@@ -866,20 +870,31 @@ export default function CodeAnalysis() {
                 )}
 
                 {isInputExpanded && (
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleAnalyze();
-                      }
-                    }}
-                    placeholder="Paste source code or drop architectural files here..."
-                    className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-slate-300 placeholder-slate-700 text-sm font-mono py-3 resize-none max-h-[200px] min-h-[44px] scrollbar-hide"
-                    disabled={isAnalyzing}
-                  />
+                  <div className="flex flex-col flex-1 gap-2">
+                    <input
+                      type="text"
+                      value={customLogic}
+                      onChange={(e) => setCustomLogic(e.target.value)}
+                      placeholder="Custom Validation Rules (Optional)..."
+                      className="w-full bg-transparent border-none outline-none focus:ring-0 text-amber-500/80 placeholder-slate-700 text-xs font-mono py-1"
+                      disabled={isAnalyzing}
+                    />
+                    <div className="h-px bg-white/5 w-full" />
+                    <textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleAnalyze();
+                        }
+                      }}
+                      placeholder="Paste source code or drop architectural files here..."
+                      className="w-full bg-transparent border-none outline-none focus:ring-0 text-slate-300 placeholder-slate-700 text-sm font-mono py-3 resize-none max-h-[200px] min-h-[44px] scrollbar-hide"
+                      disabled={isAnalyzing}
+                    />
+                  </div>
                 )}
 
                 <button

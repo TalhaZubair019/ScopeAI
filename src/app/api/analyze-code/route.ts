@@ -6,7 +6,7 @@ const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export async function POST(req: NextRequest) {
   try {
-    const { code, file } = await req.json();
+    const { code, file, customLogic } = await req.json();
 
     if (!code && !file) {
       return NextResponse.json(
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       searchContent += `CODE SNIPPET:\n\n${code}\n\n`;
     }
 
-    const systemPrompt = `
+    let systemPrompt = `
       You are the Llama 3.3 70B Auditor. 
       Your goal is to provide a world-class, deep structural analysis of the provided code, and EXPOSE EVERY HIDDEN, SUBTLE, OR NICELY PLACED ERROR.
       While you must act as a ruthless compiler and senior security researcher, you MUST apply Context-Awareness.
@@ -68,6 +68,10 @@ export async function POST(req: NextRequest) {
       - **THE TRANSACTIONAL INTEGRITY INVARIANT**: Flag any multi-step financial operation or external API call that lacks strict database transactions (BEGIN/COMMIT/ROLLBACK). Operations must be atomic to prevent 'Double Spend' and partial failure scenarios.
       - **THE SENSITIVE LEAKAGE INVARIANT**: Flag any error handling that returns full stack traces (e.g., err.stack) or excessive internal context to the client as a Critical Security Vulnerability.
     `;
+
+    if (customLogic && customLogic.trim() !== "") {
+      systemPrompt += `\n\n**USER'S CUSTOM VALIDATION LOGIC**:\nYou MUST enforce these specific rules provided by the user:\n"${customLogic}"\nEnsure these custom directives are heavily weighted in your final scores and findings!`;
+    }
 
     const fetchPayload = {
       model: "llama-3.3-70b-versatile", // Valid Groq model for deep analysis
