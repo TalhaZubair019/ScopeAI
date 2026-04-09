@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import AIProjectPlanner from "./components/AIProjectPlanner";
 import RecentProjects from "./components/RecentProjects";
 import ChatInterface from "./components/ChatInterface";
+import CodeAnalysis from "./components/CodeAnalysis";
 import { Project } from "@/lib/types";
 import {
   PlusCircle,
   History,
   LayoutGrid,
   MessageSquareText,
-  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -20,7 +21,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-type TabType = "planner" | "chat";
+type TabType = "planner" | "analysis" | "chat";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>("planner");
@@ -73,6 +74,25 @@ export default function Home() {
               <span className="relative z-10">Architect</span>
             </button>
             <button
+              onClick={() => setActiveTab("analysis")}
+              className={cn(
+                "px-6 py-2 rounded-full text-sm font-bold transition-all relative flex items-center gap-2",
+                activeTab === "analysis"
+                  ? "text-black"
+                  : "text-slate-400 hover:text-white",
+              )}
+            >
+              {activeTab === "analysis" && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-white rounded-full z-0"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              <ShieldCheck className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">Analysis</span>
+            </button>
+            <button
               onClick={() => setActiveTab("chat")}
               className={cn(
                 "px-6 py-2 rounded-full text-sm font-bold transition-all relative flex items-center gap-2",
@@ -95,7 +115,10 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="relative z-10 flex flex-col items-center pt-8 md:pt-16 pb-24">
+      <main className={cn(
+        "relative z-10 flex flex-col items-center",
+        activeTab === "planner" ? "pt-8 md:pt-16 pb-24" : "pt-0 pb-0"
+      )}>
         {/* Main Content Area with Transitions */}
         <div className="w-full">
           <AnimatePresence mode="wait">
@@ -128,6 +151,17 @@ export default function Home() {
                   />
                 </div>
               </motion.div>
+            ) : activeTab === "analysis" ? (
+              <motion.div
+                key="analysis"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full"
+              >
+                <CodeAnalysis />
+              </motion.div>
             ) : (
               <motion.div
                 key="chat"
@@ -135,7 +169,7 @@ export default function Home() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.4 }}
-                className="w-full flex flex-col items-center px-6"
+                className="w-full h-full"
               >
                 <ChatInterface />
               </motion.div>
@@ -144,27 +178,29 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="relative z-10 py-12 border-t border-white/5 text-center">
-        <div className="max-w-7xl mx-auto px-6 h-full flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="text-slate-500 text-sm">
-            &copy; 2026 ScopeAI. Crafted with precision for builders.
-          </div>
-          <div className="flex items-center gap-6 text-slate-500 text-sm">
-            <span className="flex items-center gap-1">
-              Powered by{" "}
-              <span className="text-slate-300 font-semibold tracking-tighter">
-                GROQ
+      {activeTab === "planner" && (
+        <footer className="relative z-10 py-12 border-t border-white/5 text-center">
+          <div className="max-w-7xl mx-auto px-6 h-full flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="text-slate-500 text-sm">
+              &copy; 2026 ScopeAI. Crafted with precision for builders.
+            </div>
+            <div className="flex items-center gap-6 text-slate-500 text-sm">
+              <span className="flex items-center gap-1">
+                Powered by{" "}
+                <span className="text-slate-300 font-semibold tracking-tighter">
+                  GROQ
+                </span>
               </span>
-            </span>
-            <span className="flex items-center gap-1">
-              Built with{" "}
-              <span className="text-slate-300 font-semibold tracking-tighter">
-                NEXT.JS
+              <span className="flex items-center gap-1">
+                Built with{" "}
+                <span className="text-slate-300 font-semibold tracking-tighter">
+                  NEXT.JS
+                </span>
               </span>
-            </span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

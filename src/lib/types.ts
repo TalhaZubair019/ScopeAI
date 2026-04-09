@@ -43,3 +43,11 @@ export interface ChatSession {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CodeAuditSession {
+  _id?: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
