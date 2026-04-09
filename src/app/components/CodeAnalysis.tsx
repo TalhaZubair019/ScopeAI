@@ -448,7 +448,7 @@ export default function CodeAnalysis() {
           <div className="flex items-center gap-4">
             <span className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
               <Terminal className="w-3 h-3" />
-              OSS_120B::Synchronized
+              Llama_3.3::Synchronized
             </span>
             <div className="h-4 w-px bg-white/10" />
             <span className="text-[10px] font-bold text-slate-400 truncate max-w-[300px] uppercase tracking-tighter">
@@ -548,7 +548,7 @@ export default function CodeAnalysis() {
                   <div className="flex items-center gap-2 mb-2 px-1 text-[9px] font-bold text-slate-600 uppercase tracking-widest">
                     {message.role === "user"
                       ? "Requestor::Client"
-                      : "Auditor::GPT_OSS_120B"}
+                      : "Auditor::Llama_3.3_70B"}
                   </div>
 
                   <div

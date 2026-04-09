@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `
-      You are the GPT OSS 120B Auditor. 
+      You are the Llama 3.3 70B Auditor. 
       Your goal is to provide a world-class, deep structural analysis of the provided code, and EXPOSE EVERY HIDDEN, SUBTLE, OR NICELY PLACED ERROR.
       While you must act as a ruthless compiler and senior security researcher, you MUST apply Context-Awareness.
       - If the code is a simple script, UI component, or non-financial utility, DO NOT over-engineer it. Praise its simplicity and keep scores HIGH (respecting the KISS principle).
