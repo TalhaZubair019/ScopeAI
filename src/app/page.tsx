@@ -92,7 +92,7 @@ export default function Home() {
               <ShieldCheck className="w-4 h-4 relative z-10" />
               <span className="relative z-10">Analysis</span>
             </button>
-            <button
+            {/* <button
               onClick={() => setActiveTab("chat")}
               className={cn(
                 "px-6 py-2 rounded-full text-sm font-bold transition-all relative flex items-center gap-2",
@@ -110,15 +110,17 @@ export default function Home() {
               )}
               <MessageSquareText className="w-4 h-4 relative z-10" />
               <span className="relative z-10">Chat</span>
-            </button>
+            </button> */}
           </div>
         </div>
       </nav>
 
-      <main className={cn(
-        "relative z-10 flex flex-col items-center",
-        activeTab === "planner" ? "pt-8 md:pt-16 pb-24" : "pt-0 pb-0"
-      )}>
+      <main
+        className={cn(
+          "relative z-10 flex flex-col items-center",
+          activeTab === "planner" ? "pt-8 md:pt-16 pb-24" : "pt-0 pb-0",
+        )}
+      >
         {/* Main Content Area with Transitions */}
         <div className="w-full">
           <AnimatePresence mode="wait">
