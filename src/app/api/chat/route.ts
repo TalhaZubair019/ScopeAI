@@ -2,6 +2,42 @@ import { NextRequest, NextResponse } from "next/server";
 import { ChatMessage, ChatAttachment } from "@/lib/types";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+
+// Polyfill for Node.js environment to support pdfjs-dist
+if (typeof global.DOMMatrix === "undefined") {
+  (global as any).DOMMatrix = class DOMMatrix {
+    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+    constructor() {}
+    static fromMatrix(other: any) {
+      const m = new DOMMatrix();
+      Object.assign(m, other);
+      return m;
+    }
+  };
+}
+
+if (typeof global.ImageData === "undefined") {
+  (global as any).ImageData = class ImageData {
+    constructor(public data: Uint8ClampedArray, public width: number, public height: number) {}
+  };
+}
+
+if (typeof global.Path2D === "undefined") {
+  (global as any).Path2D = class Path2D {
+    constructor() {}
+    addPath() {}
+    closePath() {}
+    moveTo() {}
+    lineTo() {}
+    bezierCurveTo() {}
+    quadraticCurveTo() {}
+    arc() {}
+    arcTo() {}
+    ellipse() {}
+    rect() {}
+  };
+}
+
 import { PDFParse } from "pdf-parse";
 import { fetchWebContent } from "@/lib/webReader";
 import { fetchGroq } from "@/lib/groq";
