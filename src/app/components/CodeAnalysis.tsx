@@ -130,6 +130,44 @@ const CodeBlock = ({
   );
 };
 
+const UserMessageContent = ({ content }: { content: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed", err);
+    }
+  };
+
+  return (
+    <div className="relative group/user-content">
+      <div className="absolute top-2 right-2 opacity-0 group-hover/user-content:opacity-100 transition-opacity z-20">
+        <button
+          onClick={handleCopy}
+          className={cn(
+            "p-1.5 rounded-lg border transition-all flex items-center gap-1.5 backdrop-blur-md",
+            copied
+              ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-600"
+              : "bg-black/20 border-black/10 text-black/40 hover:text-black hover:bg-black/30",
+          )}
+        >
+          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          <span className="text-[9px] font-bold uppercase tracking-widest">
+            {copied ? "Copied" : "Copy"}
+          </span>
+        </button>
+      </div>
+      <div className="text-[13px] font-mono leading-relaxed bg-black/10 p-4 rounded-xl border border-black/5">
+        <pre className="whitespace-pre-wrap">{content}</pre>
+      </div>
+    </div>
+  );
+};
+
 export default function CodeAnalysis() {
   const [activeSession, setActiveSession] = useState<CodeAuditSession | null>(
     null,
@@ -151,6 +189,22 @@ export default function CodeAnalysis() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        formRef.current &&
+        !formRef.current.contains(event.target as Node) &&
+        isInputExpanded
+      ) {
+        setIsInputExpanded(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isInputExpanded]);
 
   useEffect(() => {
     fetchSessions();
@@ -217,6 +271,7 @@ export default function CodeAnalysis() {
 
   const handleAnalyze = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (!isInputExpanded) return;
     if (!input.trim() && !pendingFile) return;
 
     const userMessage: ChatMessage = {
@@ -574,11 +629,7 @@ export default function CodeAnalysis() {
                           </div>
                         )}
                         {message.content && (
-                          <div className="text-[13px] font-mono leading-relaxed bg-black/10 p-4 rounded-xl border border-black/5">
-                            <pre className="whitespace-pre-wrap">
-                              {message.content}
-                            </pre>
-                          </div>
+                          <UserMessageContent content={message.content} />
                         )}
                       </div>
                     ) : (
@@ -825,6 +876,7 @@ export default function CodeAnalysis() {
             )}
 
             <form
+              ref={formRef}
               onSubmit={handleAnalyze}
               className={cn(
                 "relative transition-all duration-300",
@@ -898,11 +950,14 @@ export default function CodeAnalysis() {
                 )}
 
                 <button
-                  type={isInputExpanded ? "submit" : "button"}
-                  onClick={() => {
+                  type="button"
+                  onClick={(e) => {
                     if (!isInputExpanded) {
+                      e.preventDefault();
                       setIsInputExpanded(true);
                       setTimeout(() => textareaRef.current?.focus(), 100);
+                    } else {
+                      handleAnalyze();
                     }
                   }}
                   disabled={isInputExpanded ? (isAnalyzing || (!input.trim() && !pendingFile)) : false}
