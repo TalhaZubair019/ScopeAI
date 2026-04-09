@@ -1,6 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
-import { Download, Check, ZoomIn, ZoomOut, Maximize, Expand, Minimize, FileJson, Loader2 } from "lucide-react";
+import {
+  Download,
+  Check,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  Expand,
+  Minimize,
+  FileJson,
+  Loader2,
+} from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -60,28 +70,30 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
         .catch((err) => {
           console.error("Mermaid Render Error:", err);
           if (ref.current) {
-            ref.current.innerHTML = `<div class="p-6 text-center text-slate-500 border border-dashed border-white/5 rounded-xl bg-white/2"><p class="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Neural Visualization Error</p><p class="text-[11px] font-light">The AI generated a complex diagram that exceeded the current visualization limits. Re-initializing the plan may fix this.</p></div>`;
+            ref.current.innerHTML = `<div class="p-6 text-center text-slate-500 border border-dashed border-white/5 rounded-xl bg-white/2"><p class="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2"> Visualization Error</p><p class="text-[11px] font-light">The AI generated a complex diagram that exceeded the current visualization limits. Re-initializing the plan may fix this.</p></div>`;
           }
         });
     }
   }, [chart]);
 
   const handleZoom = (delta: number) => {
-    setScale(prev => Math.min(Math.max(prev + delta, 0.5), 5));
+    setScale((prev) => Math.min(Math.max(prev + delta, 0.5), 5));
   };
 
   const handleFullscreen = () => {
     if (!wrapperRef.current) return;
-    
+
     if (!document.fullscreenElement) {
-      wrapperRef.current.requestFullscreen()
+      wrapperRef.current
+        .requestFullscreen()
         .then(() => setIsFullscreen(true))
-        .catch(err => {
-          console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        .catch((err) => {
+          console.error(
+            `Error attempting to enable full-screen mode: ${err.message}`,
+          );
         });
     } else {
-      document.exitFullscreen()
-        .then(() => setIsFullscreen(false));
+      document.exitFullscreen().then(() => setIsFullscreen(false));
     }
   };
 
@@ -90,7 +102,8 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
       setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -178,7 +191,7 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
 
       pdf.addImage(imgData, "PNG", 0, 0, canvas.width / 2, canvas.height / 2);
       pdf.save(`scopeai-architecture-${Date.now()}.pdf`);
-      
+
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 2000);
     } catch (err) {
@@ -189,8 +202,8 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
   };
 
   return (
-    <div 
-      ref={wrapperRef} 
+    <div
+      ref={wrapperRef}
       className={`w-full relative group overflow-hidden ${isFullscreen ? "h-screen w-screen bg-black" : "rounded-2xl border border-white/5 bg-black/40"}`}
     >
       {/* Sticky Control Bar Container - Always Visible */}
@@ -224,7 +237,11 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
               className="p-1.5 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-all outline-hidden cursor-pointer"
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
-              {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Expand className="w-3.5 h-3.5" />}
+              {isFullscreen ? (
+                <Minimize className="w-3.5 h-3.5" />
+              ) : (
+                <Expand className="w-3.5 h-3.5" />
+              )}
             </button>
             <div className="w-px h-4 bg-white/10 mx-1" />
             <div className="px-2 text-[9px] font-bold text-indigo-400 font-mono w-10 text-center">
