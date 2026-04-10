@@ -5,9 +5,9 @@ export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   try {
-    const { originalCode, issueDescription } = await req.json();
+    const { messages: history, issueDescription } = await req.json();
 
-    if (!originalCode || !issueDescription) {
+    if (!history || !issueDescription) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -17,32 +17,42 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `
       You are an expert Senior Software Engineer and Security Researcher.
-      Your task is to fix ${Array.isArray(issueDescription) ? "ALL of the following issues" : "a specific issue"} in the provided code.
+      Your task is to fix ${Array.isArray(issueDescription) ? "ALL of the following issues" : "a specific issue"} across the provided architectural files.
       
       ISSUE(S) TO FIX:
       ${formattedIssues}
       
       CRITICAL ANALYSIS INVARIANTS (YOU MUST ADHERE TO THESE):
-      - **THE ATOMICITY INVARIANT**: All mathematical mutations on shared resources (balances, inventory) MUST be performed atomically in the database query (SET x = x + y).
-      - **THE FINANCIAL MATH INVARIANT**: Enforce integers (cents) or strict decimal libraries for currency. NEVER use JavaScript floating-point for financial calculations.
-      - **THE TRANSACTIONAL INTEGRITY INVARIANT**: Multi-step operations or external API calls MUST be wrapped in strict database transactions (BEGIN/COMMIT).
-      - **THE SENSITIVE LEAKAGE INVARIANT**: Never return stack traces or internal context to the client.
+      - **THE ATOMICITY INVARIANT**: All mathematical mutations on shared resources MUST be performed atomically in the database query.
+      - **THE FINANCIAL MATH INVARIANT**: Enforce integers (cents) or strict decimal libraries. NEVER use JavaScript floats for currency.
+      - **THE ECOSYSTEM INVARIANT (UNIVERSAL)**: Evaluate the code strictly according to the modern idioms and built-in protections of THAT specific ecosystem.
+      - **THE ZERO FALSE-POSITIVE RULE**: You must be FACTUAL. If you are not 100% certain, DO NOT fix it.
       
-      RULES:
-      1. Provide ONLY the fully corrected code block addressing ${Array.isArray(issueDescription) ? "every listed point" : "the issue"}.
-      2. **ZERO REGRESSION**: Your fix MUST NOT introduce new architectural flaws, security vulnerabilities, or performance bottlenecks.
-      3. **SCORE OPTIMIZATION**: Provide the code which gets the highest possible Security, Performance, Maintainability, and Reliability ratings.
-      4. **CONTEXT PRESERVATION**: Maintain the original language, existing imports, and all surrounding logic that is not related to the fix.
-      5. Do NOT provide explanations, pleasantries, or markdown formatting outside of the code block.
+      BATCH REMEDIATION RULES:
+      1. ONLY provide corrected code blocks for files that require modification to fix the listed issues.
+      2. EACH code block MUST be preceded by a bold header: **FILE: <filename>**
+      3. For files that do NOT require changes, you may provide a brief one-line note (e.g., *No changes required for <filename>*), but do NOT provide their code.
+      4. **ZERO REGRESSION**: Your fix MUST NOT introduce new architectural flaws or security vulnerabilities.
+      5. **CONTEXT PRESERVATION**: Maintain original language, imports, and surrounding logic.
+      6. Provide ONLY the corrected code blocks and their file headers. No pleasantries or meta-block wrapping.
     `;
 
     const data = await fetchGroq({
       model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: originalCode },
+        ...history.map((m: any) => {
+          let content = m.content || "";
+          if (m.attachments && m.attachments.length > 0) {
+            const attachmentInfo = m.attachments
+              .map((a: any) => `\n\nFILE: ${a.name}\nCONTENT:\n${a.url}`)
+              .join("\n");
+            content = `[ATTACHED_FILES]:${attachmentInfo}\n\nUSER_MESSAGE: ${content}`;
+          }
+          return { role: m.role, content };
+        })
       ],
-      temperature: 0.2, // Lower temperature for more deterministic code generation
+      temperature: 0.2,
     });
 
     const fixedCode = data.choices[0].message.content;

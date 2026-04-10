@@ -96,7 +96,7 @@ const CodeBlock = ({
   };
 
   return (
-    <div className="relative group/code mt-2 mb-4">
+    <div className="relative group/code mt-2 mb-4 max-w-full overflow-hidden">
       <div className="absolute top-2 right-3 opacity-0 group-hover/code:opacity-100 transition-opacity z-20">
         <button
           onClick={handleCopy}
@@ -121,7 +121,7 @@ const CodeBlock = ({
         style={vscDarkPlus}
         language={language || "javascript"}
         PreTag="div"
-        className="rounded-lg bg-black/60! border! border-white/10! p-4! m-0! font-mono text-[12px] scrollbar-hide"
+        className="rounded-lg bg-black/60! border! border-white/10! p-4! m-0! font-mono text-[12px] overflow-x-auto w-full custom-scrollbar"
         {...props}
       >
         {content}
@@ -133,9 +133,13 @@ const CodeBlock = ({
 const UserMessageContent = ({
   content,
   customRules,
+  onEdit,
+  isLastMessage,
 }: {
   content: string;
   customRules?: string;
+  onEdit?: () => void;
+  isLastMessage?: boolean;
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -155,32 +159,50 @@ const UserMessageContent = ({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-900/10 border border-amber-500/20 p-4 rounded-xl space-y-3 relative overflow-hidden group/rules"
+          className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-xl space-y-3 relative overflow-hidden group/rules"
         >
-          <div className="absolute top-0 right-0 p-2 opacity-5 group-hover/rules:opacity-10 transition-opacity">
-            <Lock className="w-12 h-12 text-blue-500" />
+          <div className="absolute top-0 right-0 p-2 opacity-10">
+            <ShieldCheck className="w-12 h-12 text-emerald-500/20" />
           </div>
-          <div className="flex items-center gap-2 text-[9px] font-bold text-blue-500 uppercase tracking-[0.2em] relative z-10">
+          <div className="flex items-center gap-2 text-[9px] font-bold text-emerald-600 uppercase tracking-[0.2em] relative z-10">
             <Edit3 className="w-3 h-3" />
             Applied_Custom_Rules
           </div>
-          <div className="pl-4 border-l border-blue-500/30">
-            <p className="text-[12px] font-mono text-blue-400 leading-relaxed italic relative z-10">
+          <div className="pl-4 border-l border-emerald-500/30">
+            <p className="text-[12px] font-mono text-emerald-700 leading-relaxed italic relative z-10">
               "{customRules}"
             </p>
           </div>
         </motion.div>
       )}
 
-      <div className="relative group/user-content">
-        <div className="absolute top-2 right-2 opacity-0 group-hover/user-content:opacity-100 transition-opacity z-20">
+      <div className="relative flex flex-col items-end gap-3 group/user-content">
+        {content && (
+          <div className="w-full text-[13px] font-mono leading-relaxed bg-black/3 p-5 rounded-xl border border-black/5 shadow-inner">
+            <pre className="whitespace-pre-wrap">{content}</pre>
+          </div>
+        )}
+
+        <div className="flex gap-2 relative z-20">
+          {isLastMessage && onEdit && (
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 rounded-lg border border-black/10 bg-black/5 text-black/50 hover:text-black hover:bg-black/10 transition-all flex items-center gap-2 backdrop-blur-md group/edit-btn shadow-xs"
+              title="Neural Re-edit"
+            >
+              <Edit3 className="w-3.5 h-3.5 group-hover/edit-btn:rotate-12 transition-transform" />
+              <span className="text-[9px] font-bold uppercase tracking-widest leading-none">
+                Edit
+              </span>
+            </button>
+          )}
           <button
             onClick={handleCopy}
             className={cn(
-              "p-1.5 rounded-lg border transition-all flex items-center gap-1.5 backdrop-blur-md",
+              "px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 backdrop-blur-md shadow-xs",
               copied
-                ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-600"
-                : "bg-black/20 border-black/10 text-black/40 hover:text-black hover:bg-black/30",
+                ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-600 font-bold"
+                : "bg-black/5 border-black/10 text-black/50 hover:text-black hover:bg-black/10",
             )}
           >
             {copied ? (
@@ -188,13 +210,10 @@ const UserMessageContent = ({
             ) : (
               <Copy className="w-3.5 h-3.5" />
             )}
-            <span className="text-[9px] font-bold uppercase tracking-widest">
+            <span className="text-[9px] font-bold uppercase tracking-widest leading-none">
               {copied ? "Copied" : "Copy"}
             </span>
           </button>
-        </div>
-        <div className="text-[13px] font-mono leading-relaxed bg-black/10 p-4 rounded-xl border border-black/5 shadow-inner">
-          <pre className="whitespace-pre-wrap">{content}</pre>
         </div>
       </div>
     </div>
@@ -208,10 +227,10 @@ export default function CodeAnalysis() {
   const [sessions, setSessions] = useState<CodeAuditSession[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [pendingFile, setPendingFile] = useState<ChatAttachment | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<ChatAttachment[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen] = useState(true);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [sessionToDelete, setSessionToDelete] =
@@ -219,8 +238,10 @@ export default function CodeAnalysis() {
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [customLogic, setCustomLogic] = useState("");
   const [isFixing, setIsFixing] = useState<string | null>(null);
+  const [requestedDepPath, setRequestedDepPath] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const depFileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -264,7 +285,7 @@ export default function CodeAnalysis() {
     setActiveSession(null);
     setMessages([]);
     setInput("");
-    setPendingFile(null);
+    setPendingFiles([]);
     setError(null);
     setIsInputExpanded(false);
     setCustomLogic("");
@@ -274,44 +295,59 @@ export default function CodeAnalysis() {
     setActiveSession(session);
     setMessages(session.messages || []);
     setInput("");
-    setPendingFile(null);
+    setPendingFiles([]);
     setError(null);
     setIsInputExpanded(false);
     setCustomLogic("");
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    if (file.size > 1024 * 1024 * 2) {
-      setError("File size exceeds 2MB limit.");
+    if (pendingFiles.length + files.length > 10) {
+      setError("Maximum 10 files can be uploaded at a time.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setPendingFile({
-        name: file.name,
-        url: content, // Storing content in url field for CodeAuditSession compatibility
-        type: file.type,
-      });
-      setError(null);
-    };
-    reader.readAsText(file);
+    files.forEach((file) => {
+      if (file.size > 1024 * 1024 * 2) {
+        setError(`${file.name} exceeds 2MB limit.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setPendingFiles((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            url: content,
+            type: file.type,
+          },
+        ]);
+        setError(null);
+      };
+      reader.readAsText(file);
+    });
+
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAnalyze = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!isInputExpanded) return;
-    if (!input.trim() && !pendingFile) return;
+    if (!input.trim() && pendingFiles.length === 0) return;
 
     const userMessage: ChatMessage = {
       role: "user",
       content: input,
-      attachments: pendingFile ? [pendingFile] : [],
+      attachments: [...pendingFiles],
       customRules: customLogic.trim() || undefined,
     };
 
@@ -320,26 +356,17 @@ export default function CodeAnalysis() {
     setIsAnalyzing(true);
     setError(null);
     setInput("");
-    setPendingFile(null);
+    setPendingFiles([]);
     setIsInputExpanded(false);
 
     try {
-      const payload = {
-        code: userMessage.content,
-        customLogic: customLogic,
-        file: userMessage.attachments?.[0]
-          ? {
-              name: userMessage.attachments[0].name,
-              content: userMessage.attachments[0].url,
-              type: userMessage.attachments[0].type,
-            }
-          : null,
-      };
-
       const response = await fetch("/api/analyze-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          messages: updatedMessages,
+          customLogic,
+        }),
       });
 
       if (!response.ok) {
@@ -389,8 +416,25 @@ export default function CodeAnalysis() {
     }
   };
 
+  const handleEditPrompt = (msg: ChatMessage) => {
+    // Restore state
+    setInput(msg.content);
+    setCustomLogic(msg.customRules || "");
+    setPendingFiles(msg.attachments || []);
+    setIsInputExpanded(true);
+
+    // Find the index of this message and slice the history
+    const messageIndex = messages.findIndex((m) => m === msg);
+    if (messageIndex !== -1) {
+      // Remove this message and everything after it
+      setMessages(messages.slice(0, messageIndex));
+    }
+
+    // Auto-focus input
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  };
+
   const handleFixIssue = async (issueDescription: string | string[]) => {
-    // Find the original code from the active session's attachments or messages
     const originalMessage = messages.find((m) => m.role === "user");
     const originalCode =
       originalMessage?.attachments?.[0]?.url || originalMessage?.content;
@@ -400,19 +444,20 @@ export default function CodeAnalysis() {
       return;
     }
 
-    const fixId = Array.isArray(issueDescription)
-      ? "FIX_ALL"
-      : issueDescription;
-    setIsFixing(fixId);
-
+    setIsFixing(
+      Array.isArray(issueDescription) ? "ALL_ISSUES" : issueDescription,
+    );
     try {
       const response = await fetch("/api/fix-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ originalCode, issueDescription }),
+        body: JSON.stringify({
+          messages,
+          issueDescription,
+        }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate fix");
+      if (!response.ok) throw new Error("Fix generation failed");
 
       const data = await response.json();
 
@@ -421,9 +466,12 @@ export default function CodeAnalysis() {
         ? "Consolidated Architectural Fix"
         : `Resolution for: ${issueDescription}`;
 
+      // Let ReactMarkdown handle the raw content (which now includes multiple labeled blocks)
+      const fixedContent = data.fixedCode.trim();
+
       const fixedMessage: ChatMessage = {
         role: "assistant",
-        content: `### 🛠️ ${resolutionTitle}\n\nHere is the corrected implementation:\n\n${data.fixedCode}`,
+        content: `### 🛠️ ${resolutionTitle}\n\nHere is the corrected implementation:\n\n${fixedContent}`,
       };
 
       const finalMessages = [...messages, fixedMessage];
@@ -431,23 +479,90 @@ export default function CodeAnalysis() {
 
       // Save the updated session to MongoDB
       if (activeSession) {
-        const sessionPayload = {
-          _id: activeSession._id,
-          title: activeSession.title,
-          messages: finalMessages,
-        };
-
         await fetch("/api/analyze-code/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(sessionPayload),
+          body: JSON.stringify({
+            _id: activeSession._id,
+            title: activeSession.title,
+            messages: finalMessages,
+          }),
         });
       }
     } catch (err: any) {
-      setError(err.message || "Failed to fix code.");
+      setError(err.message || "Failed to generate fix.");
     } finally {
       setIsFixing(null);
     }
+  };
+
+  const handleDependencyUploadRequest = (path: string) => {
+    setRequestedDepPath(path);
+    depFileInputRef.current?.click();
+  };
+
+  const handleDepFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file || !requestedDepPath) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const content = event.target?.result as string;
+
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: `Here is the missing dependency you requested for deep analysis (${requestedDepPath}):\n\n\`\`\`\n${content}\n\`\`\`\n\nPlease continue your audit incorporating this new context.`,
+      };
+
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      setIsAnalyzing(true);
+      setError(null);
+      setRequestedDepPath(null);
+
+      try {
+        const response = await fetch("/api/analyze-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: updatedMessages,
+            customLogic,
+          }),
+        });
+
+        if (!response.ok) throw new Error("Deep Analysis failed");
+
+        const data = await response.json();
+        const assistantMessage: ChatMessage = {
+          role: "assistant",
+          content: data.analysis,
+        };
+
+        const finalMessages = [...updatedMessages, assistantMessage];
+        setMessages(finalMessages);
+
+        if (activeSession) {
+          await fetch("/api/analyze-code/sessions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              _id: activeSession._id,
+              title: activeSession.title,
+              messages: finalMessages,
+            }),
+          });
+        }
+      } catch (err: any) {
+        setError(err.message || "Audit engine interrupted.");
+        setMessages(updatedMessages);
+      } finally {
+        setIsAnalyzing(false);
+      }
+    };
+    reader.readAsText(file);
+    if (depFileInputRef.current) depFileInputRef.current.value = "";
   };
 
   const renameSession = async (id: string) => {
@@ -597,7 +712,7 @@ export default function CodeAnalysis() {
       </motion.div>
 
       {/* Main Chat Workspace */}
-      <div className="flex-1 flex flex-col relative bg-[#050505]">
+      <div className="flex-1 flex flex-col relative bg-[#050505] min-w-0 overflow-hidden">
         {/* Workspace Header */}
         <div className="px-8 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
           <div className="flex items-center gap-4">
@@ -642,7 +757,7 @@ export default function CodeAnalysis() {
         </div>
 
         {/* Message List */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-12 space-y-8 scrollbar-hide relative z-10">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-12 space-y-8 scrollbar-hide relative z-10">
           {messages.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center space-y-8">
               <motion.div
@@ -675,7 +790,7 @@ export default function CodeAnalysis() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  "flex gap-6",
+                  "flex gap-6 min-w-0",
                   message.role === "user" ? "flex-row-reverse" : "flex-row",
                 )}
               >
@@ -696,7 +811,7 @@ export default function CodeAnalysis() {
 
                 <div
                   className={cn(
-                    "flex flex-col max-w-[85%]",
+                    "flex flex-col max-w-[85%] min-w-0",
                     message.role === "user" ? "items-end" : "items-start",
                   )}
                 >
@@ -708,7 +823,7 @@ export default function CodeAnalysis() {
 
                   <div
                     className={cn(
-                      "px-6 py-4 rounded-2xl border transition-all",
+                      "px-6 py-4 rounded-2xl border transition-all max-w-full overflow-hidden",
                       message.role === "user"
                         ? "bg-white text-black border-white rounded-tr-none shadow-xl"
                         : "bg-white/2 text-slate-300 border-white/5 rounded-tl-none shadow-md",
@@ -716,35 +831,55 @@ export default function CodeAnalysis() {
                   >
                     {message.role === "user" ? (
                       <div className="space-y-4">
-                        {message.attachments?.[0] && (
-                          <div className="flex items-center gap-3 pb-3 border-b border-black/5">
-                            <FileCode className="w-4 h-4 text-emerald-600" />
-                            <span className="text-xs font-bold truncate max-w-[200px]">
-                              {message.attachments[0].name}
-                            </span>
-                          </div>
-                        )}
-                        {message.content && (
+                        {message.attachments &&
+                          message.attachments.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pb-4 border-b border-black/5 mb-4">
+                              {message.attachments.map((file, idx) => (
+                                <motion.div
+                                  key={`${file.name}-${idx}`}
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: idx * 0.05 }}
+                                  className="flex items-center gap-2.5 bg-black/3 border border-black/5 px-4 py-2 rounded-xl group/msg-chip"
+                                >
+                                  <FileCode className="w-4 h-4 text-emerald-600" />
+                                  <span className="text-[11px] font-bold text-black uppercase tracking-wider truncate max-w-[180px]">
+                                    {file.name}
+                                  </span>
+                                </motion.div>
+                              ))}
+                            </div>
+                          )}
+                        {(message.content || message.customRules) && (
                           <UserMessageContent
                             content={message.content}
                             customRules={message.customRules}
+                            isLastMessage={
+                              i ===
+                              messages.reduce(
+                                (lastIdx, m, idx) =>
+                                  m.role === "user" ? idx : lastIdx,
+                                -1,
+                              )
+                            }
+                            onEdit={() => handleEditPrompt(message)}
                           />
                         )}
                       </div>
                     ) : (
-                      <div className="space-y-8">
-                        <div className="prose prose-invert prose-emerald prose-sm max-w-none">
+                      <div className="space-y-8 w-full min-w-0 overflow-x-hidden">
+                        <div className="prose prose-invert prose-emerald prose-sm max-w-none w-full min-w-0 overflow-x-hidden">
                           <ReactMarkdown
                             components={{
                               h2: ({ ...props }) => (
                                 <h2
-                                  className="text-lg font-bold text-white mt-8 mb-4 flex items-center gap-3 border-l-4 border-emerald-500 pl-4 uppercase tracking-wider font-mono"
+                                  className="text-lg font-bold text-white first:mt-0 mt-8 mb-4 flex items-center gap-3 border-l-4 border-emerald-500 pl-4 uppercase tracking-wider font-mono"
                                   {...props}
                                 />
                               ),
                               h3: ({ ...props }) => (
                                 <h3
-                                  className="text-md font-bold text-slate-200 mt-6 mb-3 flex items-center gap-2 opacity-90 border-b border-white/5 pb-2"
+                                  className="text-md font-bold text-slate-200 first:mt-0 mt-6 mb-3 flex items-center gap-2 opacity-90 border-b border-white/5 pb-2"
                                   {...props}
                                 />
                               ),
@@ -757,8 +892,58 @@ export default function CodeAnalysis() {
                               ul: ({ ...props }) => (
                                 <ul className="space-y-3 mb-6" {...props} />
                               ),
-                              li: ({ ...props }) => {
-                                const textContent = String(props.children);
+                              li: ({ children, ...props }: any) => {
+                                // Extract text correctly from React children
+                                const textContent = React.Children.toArray(
+                                  children,
+                                )
+                                  .map((child: any) =>
+                                    typeof child === "string"
+                                      ? child
+                                      : child?.props?.children || "",
+                                  )
+                                  .join("");
+
+                                // --- Missing Dependency Tag ---
+                                const depMatch = textContent.match(
+                                  /\[MISSING_DEPENDENCY:(.*?)\]/,
+                                );
+                                if (depMatch) {
+                                  const depPath = depMatch[1].trim();
+
+                                  return (
+                                    <li className="flex flex-col items-start gap-2 text-amber-400/90 text-[13px] mb-4 bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 w-full shadow-lg shadow-amber-500/5 min-w-0 overflow-hidden">
+                                      <div className="flex items-start gap-3 w-full">
+                                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+                                        <span className="leading-relaxed font-bold flex-1 uppercase tracking-wider">
+                                          Context Required: {depPath}
+                                        </span>
+                                      </div>
+                                      <div className="mt-3 flex items-center justify-between w-full bg-black/40 p-3 rounded-lg border border-white/5 gap-4">
+                                        <span className="text-xs font-mono text-slate-300 flex items-center gap-2 truncate">
+                                          <FileCode className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                          <span className="truncate">
+                                            {depPath}
+                                          </span>
+                                        </span>
+                                        <button
+                                          onClick={() =>
+                                            handleDependencyUploadRequest(
+                                              depPath,
+                                            )
+                                          }
+                                          disabled={isAnalyzing}
+                                          className="px-4 py-2 bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 disabled:opacity-50 shrink-0"
+                                        >
+                                          <Paperclip className="w-3 h-3" />
+                                          Upload Context
+                                        </button>
+                                      </div>
+                                    </li>
+                                  );
+                                }
+
+                                // --- Fix Action Tag ---
                                 const fixMatch =
                                   textContent.match(/\[FIX_ACTION:(.*?)\]/);
 
@@ -784,12 +969,16 @@ export default function CodeAnalysis() {
                                         disabled={isFixing !== null}
                                         className="ml-4 mt-2 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
                                       >
-                                        {isFixing === issueDescription ? (
+                                        {isFixing === issueDescription ||
+                                        (Array.isArray(issueDescription) &&
+                                          isFixing === "ALL_ISSUES") ? (
                                           <Loader2 className="w-3 h-3 animate-spin" />
                                         ) : (
                                           <Zap className="w-3 h-3" />
                                         )}
-                                        {isFixing === issueDescription
+                                        {isFixing === issueDescription ||
+                                        (Array.isArray(issueDescription) &&
+                                          isFixing === "ALL_ISSUES")
                                           ? "Generating Fix..."
                                           : "Auto-Fix Issue"}
                                       </button>
@@ -1065,20 +1254,33 @@ export default function CodeAnalysis() {
                   : "w-auto",
               )}
             >
-              {pendingFile && (
-                <div className="px-6 py-3 border-b border-white/5 bg-white/2 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileCode className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      {pendingFile.name}
+              {pendingFiles.length > 0 && (
+                <div className="px-6 py-4 border-b border-white/5 bg-white/2 flex flex-wrap gap-3">
+                  {pendingFiles.map((file, idx) => (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      key={`${file.name}-${idx}`}
+                      className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg group/chip shadow-lg shadow-emerald-500/5 rotate-0 hover:-rotate-1 transition-transform"
+                    >
+                      <FileCode className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider truncate max-w-[120px]">
+                        {file.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removePendingFile(idx)}
+                        className="p-1 hover:bg-emerald-500/20 rounded-md text-emerald-500/60 hover:text-red-400 transition-all"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </motion.div>
+                  ))}
+                  <div className="flex-1 flex items-center justify-end">
+                    <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
+                      {pendingFiles.length} / 10 Files Batch
                     </span>
                   </div>
-                  <button
-                    onClick={() => setPendingFile(null)}
-                    className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
               )}
 
@@ -1103,7 +1305,15 @@ export default function CodeAnalysis() {
                       ref={fileInputRef}
                       onChange={handleFileUpload}
                       className="hidden"
+                      multiple
                       accept=".ts,.tsx,.js,.jsx,.py,.go,.java,.c,.cpp,.rs"
+                    />
+                    <input
+                      type="file"
+                      ref={depFileInputRef}
+                      onChange={handleDepFileUpload}
+                      className="hidden"
+                      accept=".ts,.tsx,.js,.jsx,.py,.go,.java,.c,.cpp,.rs,.json"
                     />
                   </div>
                 )}
@@ -1152,13 +1362,14 @@ export default function CodeAnalysis() {
                   }}
                   disabled={
                     isInputExpanded
-                      ? isAnalyzing || (!input.trim() && !pendingFile)
+                      ? isAnalyzing ||
+                        (!input.trim() && pendingFiles.length === 0)
                       : false
                   }
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300 active:scale-90",
                     isInputExpanded &&
-                      (input.trim() || pendingFile) &&
+                      (input.trim() || pendingFiles.length > 0) &&
                       !isAnalyzing
                       ? "bg-white text-black shadow-lg shadow-white/5"
                       : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]",
