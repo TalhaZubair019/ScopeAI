@@ -28,6 +28,7 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   attachments?: ChatAttachment[];
+  customRules?: string;
 }
 
 export interface ChatResponse {

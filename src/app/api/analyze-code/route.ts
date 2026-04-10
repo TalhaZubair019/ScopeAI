@@ -39,8 +39,7 @@ export async function POST(req: NextRequest) {
       - Use clean code blocks for optimization examples.
       
       SCORING RULES:
-      - ALWAYS conclude the analysis with a section titled "## PROPOSED ARCHITECTURAL REFINEMENT" containing the full, corrected, and optimized version of the provided code.
-      - At the VERY END of your report, AFTER the refined code, you MUST provide a diagnostic score in a single line using this exact format:
+      - At the VERY END of your report, you MUST provide a diagnostic score in a single line using this exact format:
         [SCORES]: {"Security": , "Performance": , "Maintainability": , "Reliability": }
       - Each metric MUST be scored out of 25 exactly. The grand total should represent overall code integrity (0-100). Subtract points aggressively for any hidden flaws.
       - Use integers only (0-25). 

@@ -130,7 +130,13 @@ const CodeBlock = ({
   );
 };
 
-const UserMessageContent = ({ content }: { content: string }) => {
+const UserMessageContent = ({
+  content,
+  customRules,
+}: {
+  content: string;
+  customRules?: string;
+}) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -144,25 +150,52 @@ const UserMessageContent = ({ content }: { content: string }) => {
   };
 
   return (
-    <div className="relative group/user-content">
-      <div className="absolute top-2 right-2 opacity-0 group-hover/user-content:opacity-100 transition-opacity z-20">
-        <button
-          onClick={handleCopy}
-          className={cn(
-            "p-1.5 rounded-lg border transition-all flex items-center gap-1.5 backdrop-blur-md",
-            copied
-              ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-600"
-              : "bg-black/20 border-black/10 text-black/40 hover:text-black hover:bg-black/30",
-          )}
+    <div className="space-y-4">
+      {customRules && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-900/10 border border-amber-500/20 p-4 rounded-xl space-y-3 relative overflow-hidden group/rules"
         >
-          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          <span className="text-[9px] font-bold uppercase tracking-widest">
-            {copied ? "Copied" : "Copy"}
-          </span>
-        </button>
-      </div>
-      <div className="text-[13px] font-mono leading-relaxed bg-black/10 p-4 rounded-xl border border-black/5">
-        <pre className="whitespace-pre-wrap">{content}</pre>
+          <div className="absolute top-0 right-0 p-2 opacity-5 group-hover/rules:opacity-10 transition-opacity">
+            <Lock className="w-12 h-12 text-blue-500" />
+          </div>
+          <div className="flex items-center gap-2 text-[9px] font-bold text-blue-500 uppercase tracking-[0.2em] relative z-10">
+            <Edit3 className="w-3 h-3" />
+            Applied_Custom_Rules
+          </div>
+          <div className="pl-4 border-l border-blue-500/30">
+            <p className="text-[12px] font-mono text-blue-400 leading-relaxed italic relative z-10">
+              "{customRules}"
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="relative group/user-content">
+        <div className="absolute top-2 right-2 opacity-0 group-hover/user-content:opacity-100 transition-opacity z-20">
+          <button
+            onClick={handleCopy}
+            className={cn(
+              "p-1.5 rounded-lg border transition-all flex items-center gap-1.5 backdrop-blur-md",
+              copied
+                ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-600"
+                : "bg-black/20 border-black/10 text-black/40 hover:text-black hover:bg-black/30",
+            )}
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            <span className="text-[9px] font-bold uppercase tracking-widest">
+              {copied ? "Copied" : "Copy"}
+            </span>
+          </button>
+        </div>
+        <div className="text-[13px] font-mono leading-relaxed bg-black/10 p-4 rounded-xl border border-black/5 shadow-inner">
+          <pre className="whitespace-pre-wrap">{content}</pre>
+        </div>
       </div>
     </div>
   );
@@ -278,6 +311,7 @@ export default function CodeAnalysis() {
       role: "user",
       content: input,
       attachments: pendingFile ? [pendingFile] : [],
+      customRules: customLogic.trim() || undefined,
     };
 
     const updatedMessages = [...messages, userMessage];
@@ -629,7 +663,10 @@ export default function CodeAnalysis() {
                           </div>
                         )}
                         {message.content && (
-                          <UserMessageContent content={message.content} />
+                          <UserMessageContent
+                            content={message.content}
+                            customRules={message.customRules}
+                          />
                         )}
                       </div>
                     ) : (
@@ -865,12 +902,23 @@ export default function CodeAnalysis() {
               </motion.div>
             )}
           </AnimatePresence>
-          <div ref={scrollRef} className={cn("transition-all duration-300 shrink-0", isInputExpanded ? "h-64" : "h-24")} />
+          <div
+            ref={scrollRef}
+            className={cn(
+              "transition-all duration-300 shrink-0",
+              isInputExpanded ? "h-64" : "h-24",
+            )}
+          />
         </div>
 
         {/* Floating Chat Input Bar */}
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-20 pointer-events-none">
-          <div className={cn("max-w-4xl mx-auto relative group pointer-events-auto", !isInputExpanded && "flex justify-end")}>
+          <div
+            className={cn(
+              "max-w-4xl mx-auto relative group pointer-events-auto",
+              !isInputExpanded && "flex justify-end",
+            )}
+          >
             {isInputExpanded && (
               <div className="absolute -inset-0.5 bg-linear-to-r from-emerald-500/20 to-teal-500/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             )}
@@ -880,7 +928,9 @@ export default function CodeAnalysis() {
               onSubmit={handleAnalyze}
               className={cn(
                 "relative transition-all duration-300",
-                isInputExpanded ? "bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-3xl overflow-hidden w-full" : "w-auto"
+                isInputExpanded
+                  ? "bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-3xl overflow-hidden w-full"
+                  : "w-auto",
               )}
             >
               {pendingFile && (
@@ -900,7 +950,12 @@ export default function CodeAnalysis() {
                 </div>
               )}
 
-              <div className={cn("flex items-end gap-2", isInputExpanded ? "p-4" : "")}>
+              <div
+                className={cn(
+                  "flex items-end gap-2",
+                  isInputExpanded ? "p-4" : "",
+                )}
+              >
                 {isInputExpanded && (
                   <div className="flex flex-col gap-2 shrink-0">
                     <button
@@ -963,16 +1018,28 @@ export default function CodeAnalysis() {
                       handleAnalyze();
                     }
                   }}
-                  disabled={isInputExpanded ? (isAnalyzing || (!input.trim() && !pendingFile)) : false}
+                  disabled={
+                    isInputExpanded
+                      ? isAnalyzing || (!input.trim() && !pendingFile)
+                      : false
+                  }
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300 active:scale-90",
-                    isInputExpanded && (input.trim() || pendingFile) && !isAnalyzing
+                    isInputExpanded &&
+                      (input.trim() || pendingFile) &&
+                      !isAnalyzing
                       ? "bg-white text-black shadow-lg shadow-white/5"
                       : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]",
-                    !isInputExpanded && "w-14 h-14 flex items-center justify-center rounded-full"
+                    !isInputExpanded &&
+                      "w-14 h-14 flex items-center justify-center rounded-full",
                   )}
                 >
-                  <Send className={cn("transition-all", !isInputExpanded ? "w-6 h-6 ml-1" : "w-5 h-5")} />
+                  <Send
+                    className={cn(
+                      "transition-all",
+                      !isInputExpanded ? "w-6 h-6 ml-1" : "w-5 h-5",
+                    )}
+                  />
                 </button>
               </div>
 
