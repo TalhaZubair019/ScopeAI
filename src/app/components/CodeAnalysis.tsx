@@ -409,7 +409,14 @@ export default function CodeAnalysis() {
         fetchSessions();
       }
     } catch (err: any) {
-      setError(err.message || "Audit engine interrupted.");
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("rate limit") || msg.includes("429")) {
+        setError(
+          "Capacity Reached. Please wait a few minutes before the next analysis.",
+        );
+      } else {
+        setError(msg || "Audit engine interrupted.");
+      }
       setMessages(updatedMessages);
     } finally {
       setIsAnalyzing(false);
@@ -466,12 +473,20 @@ export default function CodeAnalysis() {
         ? "Consolidated Architectural Fix"
         : `Resolution for: ${issueDescription}`;
 
-      // Let ReactMarkdown handle the raw content (which now includes multiple labeled blocks)
-      const fixedContent = data.fixedCode.trim();
+      // Smart Wrapper: Ensure code is formatted even if AI omits backticks
+      let processedContent = data.fixedCode.trim();
+      if (
+        !processedContent.includes("```") &&
+        (processedContent.includes("{") ||
+          processedContent.includes("function") ||
+          processedContent.includes("def "))
+      ) {
+        processedContent = `**FILE: resolution_context**\n\`\`\`javascript\n${processedContent}\n\`\`\``;
+      }
 
       const fixedMessage: ChatMessage = {
         role: "assistant",
-        content: `### 🛠️ ${resolutionTitle}\n\nHere is the corrected implementation:\n\n${fixedContent}`,
+        content: `### 🛠️ ${resolutionTitle}\n\n${processedContent}`,
       };
 
       const finalMessages = [...messages, fixedMessage];
@@ -490,7 +505,14 @@ export default function CodeAnalysis() {
         });
       }
     } catch (err: any) {
-      setError(err.message || "Failed to generate fix.");
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("rate limit") || msg.includes("429")) {
+        setError(
+          "Capacity Reached. Fix Engine is cooling down. Please wait a few minutes.",
+        );
+      } else {
+        setError(msg || "Failed to generate fix.");
+      }
     } finally {
       setIsFixing(null);
     }
@@ -892,17 +914,26 @@ export default function CodeAnalysis() {
                               ul: ({ ...props }) => (
                                 <ul className="space-y-3 mb-6" {...props} />
                               ),
-                              li: ({ children, ...props }: any) => {
-                                // Extract text correctly from React children
-                                const textContent = React.Children.toArray(
-                                  children,
-                                )
-                                  .map((child: any) =>
-                                    typeof child === "string"
-                                      ? child
-                                      : child?.props?.children || "",
-                                  )
-                                  .join("");
+                              li: ({ ...props }) => {
+                                const flattenChildren = (
+                                  children: any,
+                                ): string => {
+                                  if (typeof children === "string")
+                                    return children;
+                                  if (Array.isArray(children))
+                                    return children
+                                      .map(flattenChildren)
+                                      .join("");
+                                  if (children?.props?.children)
+                                    return flattenChildren(
+                                      children.props.children,
+                                    );
+                                  return "";
+                                };
+
+                                const textContent = flattenChildren(
+                                  props.children,
+                                );
 
                                 // --- Missing Dependency Tag ---
                                 const depMatch = textContent.match(
@@ -910,13 +941,17 @@ export default function CodeAnalysis() {
                                 );
                                 if (depMatch) {
                                   const depPath = depMatch[1].trim();
+                                  const cleanText = textContent.replace(
+                                    /\[MISSING_DEPENDENCY:.*?\]/,
+                                    "",
+                                  );
 
                                   return (
                                     <li className="flex flex-col items-start gap-2 text-amber-400/90 text-[13px] mb-4 bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 w-full shadow-lg shadow-amber-500/5 min-w-0 overflow-hidden">
                                       <div className="flex items-start gap-3 w-full">
                                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
-                                        <span className="leading-relaxed font-bold flex-1 uppercase tracking-wider">
-                                          Context Required: {depPath}
+                                        <span className="leading-relaxed font-medium flex-1">
+                                          {cleanText}
                                         </span>
                                       </div>
                                       <div className="mt-3 flex items-center justify-between w-full bg-black/40 p-3 rounded-lg border border-white/5 gap-4">

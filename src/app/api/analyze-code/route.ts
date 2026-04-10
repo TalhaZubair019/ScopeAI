@@ -31,12 +31,13 @@ export async function POST(req: NextRequest) {
       - If the code is a simple script, UI component, or non-financial utility, DO NOT over-engineer it. Praise its simplicity and keep scores HIGH.
       - ONLY unleash aggressive score deductions, database transaction invariants, and ruthless enterprise scaling critiques if the code handles heavy state mutations, payments, auth, or database persistence!
       
-      STRICT UI FORMATTING RULES:
-      - AVOID long paragraphs. Bullet points are MANDATORY for all findings.
-      - **CRITICAL ISSUES**: ALWAYS use a bulleted list for 'Critical Issues' or 'Alerts'. Each issue MUST be its own list item. NEVER combine them into a single paragraph.
-      - **AUTO-FIX TAGGING**: If an issue can be resolved with a code change, you MUST append this exact tag at the end of the bullet point: [FIX_ACTION: Brief description of the issue to fix]
+      STRICT UI FORMATTING RULES (NEGATIVE CONSTRAINTS):
+      - **TAG VOCABULARY LOCK**: You are ONLY allowed to use two specific tags: [FIX_ACTION: ...] and [MISSING_DEPENDENCY: ...].
+      - **FORBIDDEN TAGS**: NEVER use tags like [MISSING_TESTS], [MISSING_LOGS], [MISSING_DOCS], or any other [MISSING_X] variations.
+      - **NO REPETITIVE LISTS**: Do not provide long lists of enterprise requirements. Focus strictly on architectural and logic findings.
       
-      - **DEEP ANALYSIS REQUEST**: Scan the code's imports. If the code relies heavily on local files (e.g., '@/lib/types', '../utils/math') that are CRITICAL to understanding the architecture or security, request them by appending this exact tag to a bullet point explaining why you need it: [MISSING_DEPENDENCY: exact/path/to/file.ts]
+      - **AUTO-FIX TAGGING**: If an issue can be resolved with a code change, you MUST append this exact tag at the end of the bullet point: [FIX_ACTION: Brief description of the issue to fix]
+      - **DEPENDENCY REQUEST**: If the code relies on local files critical to the audit, request them using: [MISSING_DEPENDENCY: exact/path/to/file.ts]
       
       - Use '##' for main sections.
       - Use **lists** and **bullet points** for over 95% of your content.
@@ -70,8 +71,11 @@ export async function POST(req: NextRequest) {
       - **THE ZERO FALSE-POSITIVE RULE**: You are a ruthless auditor, but you must be FACTUAL. If you are not 100% certain that a specific line of code introduces a vulnerability in its specific language context, DO NOT flag it. Theoretical, non-contextual complaints will result in systemic failure.
     `;
 
-    if (customLogic && customLogic.trim() !== "") {
-      systemPrompt += `\n\n**USER'S CUSTOM VALIDATION LOGIC**:\nYou MUST enforce these specific rules provided by the user:\n"${customLogic}"\nEnsure these custom directives are heavily weighted in your final scores and findings!`;
+    // Extract custom rules from history if not explicitly provided as customLogic
+    const effectiveLogic = customLogic || history.findLast((m: any) => m.customRules)?.customRules;
+
+    if (effectiveLogic && effectiveLogic.trim() !== "") {
+      systemPrompt += `\n\n**USER'S CUSTOM VALIDATION LOGIC**:\nYou MUST enforce these specific rules provided by the user:\n"${effectiveLogic}"\nEnsure these custom directives are heavily weighted in your final scores and findings!`;
     }
 
     const data = await fetchGroq({

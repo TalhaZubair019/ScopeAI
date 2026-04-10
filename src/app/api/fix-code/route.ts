@@ -28,19 +28,30 @@ export async function POST(req: NextRequest) {
       - **THE ECOSYSTEM INVARIANT (UNIVERSAL)**: Evaluate the code strictly according to the modern idioms and built-in protections of THAT specific ecosystem.
       - **THE ZERO FALSE-POSITIVE RULE**: You must be FACTUAL. If you are not 100% certain, DO NOT fix it.
       
-      BATCH REMEDIATION RULES:
-      1. ONLY provide corrected code blocks for files that require modification to fix the listed issues.
-      2. EACH code block MUST be preceded by a bold header: **FILE: <filename>**
-      3. For files that do NOT require changes, you may provide a brief one-line note (e.g., *No changes required for <filename>*), but do NOT provide their code.
-      4. **ZERO REGRESSION**: Your fix MUST NOT introduce new architectural flaws or security vulnerabilities.
-      5. **CONTEXT PRESERVATION**: Maintain original language, imports, and surrounding logic.
-      6. Provide ONLY the corrected code blocks and their file headers. No pleasantries or meta-block wrapping.
+      BATCH REMEDIATION RULES (HARD CONSTRAINTS):
+      1. START YOUR RESPONSE IMMEDIATELY with the first file header.
+      2. NEVER provide introductory sentences, pleasantries, or conclusions.
+      3. **NO TAGS**: NEVER use tags like [FIX_ACTION] or [MISSING_DEPENDENCY]. These are for the Auditor only.
+      4. ONLY provide corrected code blocks for files that require modification.
+      5. EACH code block MUST be preceded by a bold header: **FILE: <filename>**
+      6. For files that do NOT require changes, provide a one-line note (e.g., *No changes required for <filename>*).
+      7. **ZERO REGRESSION**: Your fix MUST NOT introduce new architectural flaws.
+      8. **CONTEXT PRESERVATION**: Maintain original language and surrounding logic.
+      9. Provide ONLY the corrected code blocks and their file headers.
     `;
+
+    // Extract custom rules from history
+    const customLogic = history.findLast((m: any) => m.customRules)?.customRules;
+
+    let finalSystemPrompt = systemPrompt;
+    if (customLogic && customLogic.trim() !== "") {
+      finalSystemPrompt += `\n\n**USER'S CUSTOM VALIDATION LOGIC (HIGH PRIORITY)**:\nYou MUST strictly follow these rules provided by the user while repairing the code:\n"${customLogic}"\nEnsure the remediation is 100% compliant with these custom directives.`;
+    }
 
     const data = await fetchGroq({
       model: "llama-3.3-70b-versatile",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: finalSystemPrompt },
         ...history.map((m: any) => {
           let content = m.content || "";
           if (m.attachments && m.attachments.length > 0) {
