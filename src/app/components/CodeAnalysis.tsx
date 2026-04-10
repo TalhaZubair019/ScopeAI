@@ -218,6 +218,7 @@ export default function CodeAnalysis() {
     useState<CodeAuditSession | null>(null);
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [customLogic, setCustomLogic] = useState("");
+  const [isFixing, setIsFixing] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -385,6 +386,67 @@ export default function CodeAnalysis() {
       setMessages(updatedMessages);
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleFixIssue = async (issueDescription: string | string[]) => {
+    // Find the original code from the active session's attachments or messages
+    const originalMessage = messages.find((m) => m.role === "user");
+    const originalCode =
+      originalMessage?.attachments?.[0]?.url || originalMessage?.content;
+
+    if (!originalCode) {
+      setError("Could not locate original code to apply fix.");
+      return;
+    }
+
+    const fixId = Array.isArray(issueDescription)
+      ? "FIX_ALL"
+      : issueDescription;
+    setIsFixing(fixId);
+
+    try {
+      const response = await fetch("/api/fix-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ originalCode, issueDescription }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate fix");
+
+      const data = await response.json();
+
+      // Append the fixed code as a new assistant message
+      const resolutionTitle = Array.isArray(issueDescription)
+        ? "Consolidated Architectural Fix"
+        : `Resolution for: ${issueDescription}`;
+
+      const fixedMessage: ChatMessage = {
+        role: "assistant",
+        content: `### 🛠️ ${resolutionTitle}\n\nHere is the corrected implementation:\n\n${data.fixedCode}`,
+      };
+
+      const finalMessages = [...messages, fixedMessage];
+      setMessages(finalMessages);
+
+      // Save the updated session to MongoDB
+      if (activeSession) {
+        const sessionPayload = {
+          _id: activeSession._id,
+          title: activeSession.title,
+          messages: finalMessages,
+        };
+
+        await fetch("/api/analyze-code/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(sessionPayload),
+        });
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to fix code.");
+    } finally {
+      setIsFixing(null);
     }
   };
 
@@ -695,14 +757,55 @@ export default function CodeAnalysis() {
                               ul: ({ ...props }) => (
                                 <ul className="space-y-3 mb-6" {...props} />
                               ),
-                              li: ({ ...props }) => (
-                                <li className="flex items-start gap-3 text-slate-400 text-[13px]">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                                  <span className="leading-relaxed font-light">
-                                    {props.children}
-                                  </span>
-                                </li>
-                              ),
+                              li: ({ ...props }) => {
+                                const textContent = String(props.children);
+                                const fixMatch =
+                                  textContent.match(/\[FIX_ACTION:(.*?)\]/);
+
+                                if (fixMatch) {
+                                  const issueDescription = fixMatch[1].trim();
+                                  const cleanText = textContent.replace(
+                                    /\[FIX_ACTION:.*?\]/,
+                                    "",
+                                  );
+
+                                  return (
+                                    <li className="flex flex-col items-start gap-2 text-slate-400 text-[13px] mb-4 bg-white/5 p-3 rounded-lg border border-white/10">
+                                      <div className="flex items-start gap-3 w-full">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
+                                        <span className="leading-relaxed font-light flex-1">
+                                          {cleanText}
+                                        </span>
+                                      </div>
+                                      <button
+                                        onClick={() =>
+                                          handleFixIssue(issueDescription)
+                                        }
+                                        disabled={isFixing !== null}
+                                        className="ml-4 mt-2 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                                      >
+                                        {isFixing === issueDescription ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Zap className="w-3 h-3" />
+                                        )}
+                                        {isFixing === issueDescription
+                                          ? "Generating Fix..."
+                                          : "Auto-Fix Issue"}
+                                      </button>
+                                    </li>
+                                  );
+                                }
+
+                                return (
+                                  <li className="flex items-start gap-3 text-slate-400 text-[13px]">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                                    <span className="leading-relaxed font-light">
+                                      {props.children}
+                                    </span>
+                                  </li>
+                                );
+                              },
                               code: ({
                                 inline,
                                 className,
@@ -739,6 +842,35 @@ export default function CodeAnalysis() {
                             {message.content.split("[SCORES]:")[0]}
                           </ReactMarkdown>
                         </div>
+
+                        {/* Fix All Button Integration */}
+                        {(() => {
+                          const fixActions = Array.from(
+                            message.content.matchAll(/\[FIX_ACTION:(.*?)\]/g),
+                          ).map((m) => m[1].trim());
+
+                          if (fixActions.length > 1) {
+                            return (
+                              <div className="mt-8 pt-6 border-t border-white/5 flex justify-center">
+                                <button
+                                  onClick={() => handleFixIssue(fixActions)}
+                                  disabled={isFixing !== null}
+                                  className="w-full py-4 bg-linear-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded-xl flex items-center justify-center gap-3 text-[11px] font-bold uppercase tracking-[0.2em] transition-all group/fixall disabled:opacity-50 shadow-[0_0_20px_rgba(16,185,129,0.05)]"
+                                >
+                                  {isFixing === "FIX_ALL" ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Zap className="w-4 h-4 group-hover/fixall:scale-110 transition-transform" />
+                                  )}
+                                  {isFixing === "FIX_ALL"
+                                    ? "Synthesizing Master Fix..."
+                                    : "Fix All Issues Simultaneously"}
+                                </button>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
 
                         {/* Diagnostic Scores Integration */}
                         {message.content.includes("[SCORES]:") && (

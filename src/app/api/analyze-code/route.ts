@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       STRICT UI FORMATTING RULES:
       - AVOID long paragraphs. Bullet points are MANDATORY for all findings.
       - **CRITICAL ISSUES**: ALWAYS use a bulleted list for 'Critical Issues' or 'Alerts'. Each issue MUST be its own list item. NEVER combine them into a single paragraph.
+      - **AUTO-FIX TAGGING**: If an issue can be resolved with a code change, you MUST append this exact tag at the end of the bullet point: [FIX_ACTION: Brief description of the issue to fix]
       - Use '##' for main sections.
       - Use **lists** and **bullet points** for over 95% of your content.
       - Maintain a professional, and technical tone.
