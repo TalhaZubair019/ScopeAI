@@ -787,6 +787,14 @@ const ChatInterface: React.FC = () => {
                                     );
                                   },
                                   pre: ({ children }: any) => <>{children}</>,
+                                  a: ({ ...props }) => (
+                                    <a
+                                      className="text-indigo-400 hover:text-indigo-300 underline underline-offset-4 transition-colors"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      {...props}
+                                    />
+                                  ),
                                 }}
                               >
                                 {message.content}

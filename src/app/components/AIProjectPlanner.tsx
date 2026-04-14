@@ -78,7 +78,7 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
       }
 
       const data = await response.json();
-      
+
       // Handle both { tasks: [], flowchart: "" } and fallback to flat tasks array
       if (Array.isArray(data)) {
         setTasks(data);

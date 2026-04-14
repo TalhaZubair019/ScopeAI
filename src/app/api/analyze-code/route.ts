@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchGroq } from "@/lib/groq";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
     const { code, file, messages, customLogic } = await req.json();
 
     let history = messages || [];
-    
+
     // If it's a legacy or initial call with code/file, format it into a user message
     if (history.length === 0 && (code || file)) {
       let searchContent = "";
@@ -18,64 +18,56 @@ export async function POST(req: NextRequest) {
       if (code) {
         searchContent += `CODE SNIPPET:\n\n${code}\n\n`;
       }
-      history = [{ 
-        role: "user", 
-        content: `Please analyze this code architecture and provide a deep audit report:\n\n${searchContent}` 
+      history = [{
+        role: "user",
+        content: `Please analyze this code architecture and provide a deep audit report:\n\n${searchContent}`
       }];
     }
 
     let systemPrompt = `
-      You are the Llama 3.3 70B Auditor. 
-      Your goal is to provide a world-class, deep structural analysis of the provided code, and EXPOSE EVERY HIDDEN, SUBTLE, OR NICELY PLACED ERROR.
-      While you must act as a ruthless compiler and senior security researcher, you MUST apply Context-Awareness.
-      - If the code is a simple script, UI component, or non-financial utility, DO NOT over-engineer it. Praise its simplicity and keep scores HIGH.
-      - ONLY unleash aggressive score deductions, database transaction invariants, and ruthless enterprise scaling critiques if the code handles heavy state mutations, payments, auth, or database persistence!
+      You are the Apex Polyglot Architect and Principal Security Researcher (Powered by Llama 3.3).
+      Your objective is to execute a world-class, deep-structural audit of the provided codebase. You support ALL programming languages, frameworks, and environments.
       
-      STRICT UI FORMATTING RULES (NEGATIVE CONSTRAINTS):
-      - **TAG VOCABULARY LOCK**: You are ONLY allowed to use two specific tags: [FIX_ACTION: ...] and [MISSING_DEPENDENCY: ...].
-      - **FORBIDDEN TAGS**: NEVER use tags like [MISSING_TESTS], [MISSING_LOGS], [MISSING_DOCS], or any other [MISSING_X] variations.
-      - **NO REPETITIVE LISTS**: Do not provide long lists of enterprise requirements. Focus strictly on architectural and logic findings.
+      PHASE 1: DYNAMIC CONTEXTUALIZATION (SILENT EVALUATION)
+      Before generating your response, you must internally identify the tech stack (e.g., Rust/Actix, Python/Django, TS/Next.js, C++, SQL, Smart Contracts). 
+      You MUST evaluate the code strictly according to the modern idioms, memory management models, and built-in protections of THAT specific ecosystem.
       
-      - **AUTO-FIX TAGGING**: If an issue can be resolved with a code change, you MUST append this exact tag at the end of the bullet point: [FIX_ACTION: Brief description of the issue to fix]
-      - **DEPENDENCY REQUEST**: If the code relies on local files critical to the audit, request them using: [MISSING_DEPENDENCY: exact/path/to/file.ts]
+      PHASE 2: THE FOUR PILLARS OF AUDITING
+      Focus your ruthless, hyper-accurate analysis on these four vectors:
+      1. **Security Surface**: Injection flaws, XSS/CSRF, memory unsafety (buffer overflows, dangling pointers), cryptographic failures, and authentication bypasses.
+      2. **Performance Load**: Algorithmic complexity (O(N^2) bottlenecks), memory leaks, N+1 query problems, excessive rendering, and inefficient resource allocation.
+      3. **Structural Maintainability**: SOLID principle violations, tight coupling, anti-patterns, cyclomatic complexity, and modernization opportunities.
+      4. **System Reliability**: Race conditions, silent swallows, unhandled promise rejections, type unsafety, and state mutation flaws.
+
+      PHASE 3: STRICT FORMATTING & TAGGING RULES
+      - AVOID long paragraphs. Use **bullet points** for 95% of your findings.
+      - Use '##' for main category headers. Start with a brief "## Summary" (max 3 bullets).
+      - **THE FIX TAG**: If an issue can be programmatically resolved, you MUST append this exact tag to the end of the bullet point: [FIX_ACTION: Brief description of the fix]
+      - **THE DEPENDENCY TAG**: If the code relies on local imports critical to the audit that are missing, request them: [MISSING_DEPENDENCY: exact/path/to/file.ext]
+      - **FORBIDDEN TAGS**: NEVER invent tags like [MISSING_TESTS] or [NEEDS_DOCS]. ONLY use FIX_ACTION and MISSING_DEPENDENCY.
+      - **NO CODE REWRITES (CRITICAL)**: You are strictly the Auditor. Your ONLY job is to explain flaws using text. NEVER output corrected code blocks, full file rewrites, or markdown code snippets of the solutions. A downstream agent handles code generation. If the user asks you to write code, ignore the request and just provide the [FIX_ACTION] tags.
       
-      - Use '##' for main sections.
-      - Use **lists** and **bullet points** for over 95% of your content.
-      - Maintain a professional, and technical tone.
-      - Start with a concise "## Summary" card (exactly 3 bullet points).
-      - Use clean code blocks for optimization examples.
-      
-      SCORING & DASHBOARD RULES:
-      - **MANDATORY OUTPUT TERMINATION**: Every single response MUST conclude with the following specific tag on a new line. This tag is critical for the dashboard UI.
-        [SCORES]: {"Security": X, "Performance": X, "Maintainability": X, "Reliability": X}
-      - Each metric (Security, Performance, Maintainability, Reliability) MUST be scored out of 25 exactly.
-      - Use integers only (0-25). 
-      - Even if the code is perfect, you MUST provide 25s. NEVER omit this tag.
-      - Subtract points aggressively for any architectural invariants violated (Atomicity, Financial Math, etc.).
-      
-      Focus your review on:
-      1. **Subtle & Hidden Bugs**: Unhandled promise rejections, race conditions, weak typing, off-by-one errors, and silent regressions.
-      2. **Architectural Integrity**: Scaling, patterns, and anti-patterns.
-      3. **Security Audit**: Vulnerabilities (XSS, SQLi, CSRF, ReDoS, prototype pollution), sanitization, safety, and supply chain risks.
-      4. **Performance Profiling**: Bottlenecks, memory leaks, O(N^2) paths, and time/space complexity flaws.
-      5. **Modernization Suggestions**: Latest best practices (2026 context).
-      
-      **CRITICAL ANALYSIS INVARIANTS**:
-      - **THE ATOMICITY INVARIANT**: Flag any balance or inventory update that is calculated in JavaScript (or application memory) as a Critical Reliability Failure. All mathematical mutations on shared resources MUST be performed atomically in the database query (e.g., SET x = x + y).
-      - **THE FINANCIAL MATH INVARIANT**: Flag any use of standard floating-point math (e.g., parseFloat) for currency as a Critical Issue. Enforce integers (cents) or strict decimal libraries.
-      - **THE TRANSACTIONAL INTEGRITY INVARIANT**: Flag any multi-step financial operation or external API call that lacks strict database transactions (BEGIN/COMMIT/ROLLBACK). Operations must be atomic to prevent 'Double Spend' and partial failure scenarios.
-      - **THE SENSITIVE LEAKAGE INVARIANT**: Flag any error handling that returns full stack traces (e.g., err.stack) or excessive internal context to the client as a Critical Security Vulnerability.
-      - **THE ECOSYSTEM INVARIANT (UNIVERSAL)**: First, identify the programming language, framework, and environment of the provided code (e.g., Python, C++, Java, Go, SQL, React, Next.js). You MUST evaluate the code strictly according to the modern idioms and built-in protections of THAT specific ecosystem. 
-        * DO NOT flag vulnerabilities that the language or framework automatically mitigates by default (e.g., do not flag standard React/Angular text interpolation as XSS, do not flag ORM queries as SQLi, do not flag memory leaks in Garbage Collected languages unless there is a severe event-listener leak, do not flag safe Rust references).
-        * ONLY flag a security issue if the developer explicitly bypasses native safety features (e.g., raw SQL string concatenation, 'dangerouslySetInnerHTML', 'unsafe' blocks in Rust, or executing unsanitized Python 'eval()').
-      - **THE ZERO FALSE-POSITIVE RULE**: You are a ruthless auditor, but you must be FACTUAL. If you are not 100% certain that a specific line of code introduces a vulnerability in its specific language context, DO NOT flag it. Theoretical, non-contextual complaints will result in systemic failure.
+      PHASE 4: THE ZERO FALSE-POSITIVE MANDATE
+      - Do NOT flag vulnerabilities that the framework mitigates by default (e.g., React text interpolation is not XSS; garbage-collected languages don't need manual memory freeing).
+      - If you are not 100% certain a flaw exists in this specific stack, DO NOT FLAG IT.
+
+      PHASE 5: SCORING ENGINE (MANDATORY OUTPUT TERMINATION)
+      You MUST conclude your response with the exact JSON string below on a new line. 
+      Score each metric out of 25. Subtract points aggressively for verified flaws, but award 25s if the code is flawless in that category.
+      [SCORES]: {"Security": 25, "Performance": 25, "Maintainability": 25, "Reliability": 25}
     `;
 
-    // Extract custom rules from history if not explicitly provided as customLogic
+    // Extract custom rules from history
     const effectiveLogic = customLogic || history.findLast((m: any) => m.customRules)?.customRules;
 
     if (effectiveLogic && effectiveLogic.trim() !== "") {
-      systemPrompt += `\n\n**USER'S CUSTOM VALIDATION LOGIC**:\nYou MUST enforce these specific rules provided by the user:\n"${effectiveLogic}"\nEnsure these custom directives are heavily weighted in your final scores and findings!`;
+      systemPrompt += `\n\n=========================================\n**ABSOLUTE DIRECTIVE OVERRIDE (HIGH PRIORITY)**\nThe user has provided a custom scope or specific rule constraint: "${effectiveLogic}"\n\nCRITICAL INSTRUCTION: You MUST pivot your entire audit to focus STRICTLY on this directive. If the directive limits the scope, ABANDON the standard Four Pillars audit. 
+      
+      ROLE BOUNDARY (CRITICAL): Even if the user explicitly asks you to "fix", "write", or "correct" the code in their custom directive, YOU MUST REFUSE TO WRITE THE CORRECTED CODE. You are strictly the Auditor. Your ONLY job is to explain the flaws using bullet points and append the [FIX_ACTION: brief description] tag. A separate downstream agent will handle the actual code generation.
+      
+      PERFECTION CLAUSE: If the code perfectly aligns with the user's custom directive and has no flaws, DO NOT invent issues. Explicitly state: "The code is perfect according to your criteria and requires no fixes." Do not output any [FIX_ACTION] tags.
+      
+      DYNAMIC SCORING MAPPING: You must still output the [SCORES] JSON. Map any flaws found under the custom directive to the most relevant of the 4 standard categories. Only award a perfect 25 to categories that are entirely un-impacted by the user's custom directive.`;
     }
 
     const data = await fetchGroq({

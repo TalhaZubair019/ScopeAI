@@ -17,11 +17,11 @@ export async function fetchWebContent(url: string): Promise<string> {
     if (!response.ok) return `[Error fetching ${url}: ${response.statusText}]`;
 
     const html = await response.text();
-    
+
     // Simple extraction of title and body to avoid boilerplate
     const titleMatch = html.match(/<title>(.*?)<\/title>/i);
     const title = titleMatch ? titleMatch[1] : "Untitled Source";
-    
+
     // Remove script, style, and nav tags before converting
     let cleanHtml = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
@@ -30,7 +30,7 @@ export async function fetchWebContent(url: string): Promise<string> {
       .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, "");
 
     const markdown = turndown.turndown(cleanHtml);
-    
+
     // Return a condensed version (first 10,000 characters to stay within reasonable context)
     return `--- WEB SOURCE: ${title} (${url}) ---\n${markdown.slice(0, 10000)}\n--- END SOURCE ---`;
   } catch (error) {

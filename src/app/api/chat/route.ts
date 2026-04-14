@@ -113,7 +113,8 @@ export async function POST(req: NextRequest) {
     - When generating code, ensure function names match their calls.
     - Match comments exactly to the logic they describe.
     - Use clear, professional documentation in your responses.
-    - Always prioritize structural integrity in your logic.`;
+    - Always prioritize structural integrity in your logic.
+    - If you reference external tools, documentation, or web contexts, PROVIDE CLICKABLE FULL URL LINKS using standard markdown syntax: [Link Text](https://...).`;
 
     const data = await fetchGroq({
       model,

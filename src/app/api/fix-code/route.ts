@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchGroq } from "@/lib/groq";
 
-export const runtime = "edge";
-
+export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   try {
     const { messages: history, issueDescription } = await req.json();
@@ -16,28 +15,27 @@ export async function POST(req: NextRequest) {
       : issueDescription;
 
     const systemPrompt = `
-      You are an expert Senior Software Engineer and Security Researcher.
-      Your task is to fix ${Array.isArray(issueDescription) ? "ALL of the following issues" : "a specific issue"} across the provided architectural files.
+      You are the Apex Polyglot Remediation Engineer.
+      Your explicit task is to repair and optimize ${Array.isArray(issueDescription) ? "ALL of the following issues" : "a specific issue"} across the provided architectural files.
       
       ISSUE(S) TO FIX:
       ${formattedIssues}
       
-      CRITICAL ANALYSIS INVARIANTS (YOU MUST ADHERE TO THESE):
-      - **THE ATOMICITY INVARIANT**: All mathematical mutations on shared resources MUST be performed atomically in the database query.
-      - **THE FINANCIAL MATH INVARIANT**: Enforce integers (cents) or strict decimal libraries. NEVER use JavaScript floats for currency.
-      - **THE ECOSYSTEM INVARIANT (UNIVERSAL)**: Evaluate the code strictly according to the modern idioms and built-in protections of THAT specific ecosystem.
-      - **THE ZERO FALSE-POSITIVE RULE**: You must be FACTUAL. If you are not 100% certain, DO NOT fix it.
+      THE REMEDIATION MANDATE (HARD CONSTRAINTS):
+      1. **DYNAMIC ADAPTATION**: Identify the language/framework of the original code. Your fix MUST utilize the idiomatic patterns, standard libraries, and optimal syntax of THAT specific ecosystem.
+      2. **ZERO REGRESSION**: Your code changes MUST NOT introduce new architectural flaws, security vulnerabilities, memory leaks, or performance bottlenecks.
+      3. **CONTEXT PRESERVATION**: Do not rewrite the entire file unless necessary. Maintain the original business logic, variable naming conventions, and surrounding architecture.
       
-      BATCH REMEDIATION RULES (HARD CONSTRAINTS):
-      1. START YOUR RESPONSE IMMEDIATELY with the first file header.
-      2. NEVER provide introductory sentences, pleasantries, or conclusions.
-      3. **NO TAGS**: NEVER use tags like [FIX_ACTION] or [MISSING_DEPENDENCY]. These are for the Auditor only.
+      OUTPUT FORMATTING ENGINE (STRICT RULESET):
+      1. START IMMEDIATELY with the first file header.
+      2. **REMEDIATION SUMMARIES**: For each modified file, provide a concise bulleted list (max 3 points) titled '**APPLIED FIXES:**' immediately after the file header and before the code block.
+      3. **NO TAGS**: NEVER output tags like [FIX_ACTION], [MISSING_DEPENDENCY], or [SCORES]. 
       4. ONLY provide corrected code blocks for files that require modification.
-      5. EACH code block MUST be preceded by a bold header: **FILE: <filename>**
-      6. For files that do NOT require changes, provide a one-line note (e.g., *No changes required for <filename>*).
-      7. **ZERO REGRESSION**: Your fix MUST NOT introduce new architectural flaws.
-      8. **CONTEXT PRESERVATION**: Maintain original language and surrounding logic.
-      9. Provide ONLY the corrected code blocks and their file headers.
+      5. EACH code block MUST be preceded by a bold header indicating the target file.
+         - If fixing a specific named file, use: **FILE: <filename>**
+         - If the input was a raw snippet without a filename, use: **FILE: resolution_context**
+      6. For files provided in the context that do NOT require modification, provide a single line: *No changes required for <filename>*
+      7. Output ONLY the file headers, the remediation summaries, and the markdown code blocks. NO introductory sentences or conclusions.
     `;
 
     // Extract custom rules from history
@@ -45,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     let finalSystemPrompt = systemPrompt;
     if (customLogic && customLogic.trim() !== "") {
-      finalSystemPrompt += `\n\n**USER'S CUSTOM VALIDATION LOGIC (HIGH PRIORITY)**:\nYou MUST strictly follow these rules provided by the user while repairing the code:\n"${customLogic}"\nEnsure the remediation is 100% compliant with these custom directives.`;
+      finalSystemPrompt += `\n\n=========================================\n**ABSOLUTE DIRECTIVE OVERRIDE**\nThe user previously defined this custom rule: "${customLogic}"\n\nCRITICAL INSTRUCTION: Your generated code fix MUST be 100% compliant with this custom directive. Prioritize this rule above standard idioms if they conflict.\n\nFORMATTING LOCK (CRITICAL): Even under this custom directive, you MUST STRICTLY adhere to the 'OUTPUT FORMATTING ENGINE' rules. NEVER provide explanations, text, or summaries. Output ONLY the **FILE: <filename>** headers and the corrected code blocks.`;
     }
 
     const data = await fetchGroq({
