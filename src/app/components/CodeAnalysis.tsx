@@ -231,6 +231,7 @@ export default function CodeAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [sessionToDelete, setSessionToDelete] =
@@ -265,6 +266,32 @@ export default function CodeAnalysis() {
     fetchSessions();
   }, []);
 
+  // Restore active session on mount
+  useEffect(() => {
+    if (sessions.length > 0 && !activeSession && messages.length === 0) {
+      if (typeof window !== "undefined") {
+        const savedAuditId = localStorage.getItem("scopeai_active_audit");
+        if (savedAuditId) {
+          const sessionToRestore = sessions.find((s) => s._id === savedAuditId);
+          if (sessionToRestore) {
+            loadSession(sessionToRestore);
+          }
+        }
+      }
+    }
+  }, [sessions, activeSession, messages.length]);
+
+  // Save active session to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (activeSession?._id) {
+        localStorage.setItem("scopeai_active_audit", activeSession._id);
+      } else {
+        localStorage.removeItem("scopeai_active_audit");
+      }
+    }
+  }, [activeSession]);
+
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isAnalyzing]);
@@ -289,6 +316,9 @@ export default function CodeAnalysis() {
     setError(null);
     setIsInputExpanded(false);
     setCustomLogic("");
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+       setIsMobileSidebarOpen(false);
+    }
   };
 
   const loadSession = (session: CodeAuditSession) => {
@@ -299,6 +329,9 @@ export default function CodeAnalysis() {
     setError(null);
     setIsInputExpanded(false);
     setCustomLogic("");
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+       setIsMobileSidebarOpen(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -627,11 +660,22 @@ export default function CodeAnalysis() {
   };
 
   return (
-    <div className="w-full flex h-[calc(100vh-80px)] overflow-hidden">
+    <div className="w-full flex h-[calc(100dvh-80px)] overflow-hidden relative">
+      {/* Mobile Backdrop */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm" 
+          onClick={() => setIsMobileSidebarOpen(false)} 
+        />
+      )}
+
       {/* Sidebar */}
-      <motion.div
-        animate={{ width: isSidebarOpen ? 280 : 0 }}
-        className="h-full bg-black/40 border-r border-white/5 flex flex-col overflow-hidden"
+      <div
+        className={cn(
+          "flex flex-col fixed inset-y-0 left-0 z-50 md:relative h-full bg-black/40 border-r border-white/5 overflow-hidden transition-all duration-300",
+          isSidebarOpen ? "w-[280px]" : "w-0",
+          isMobileSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full md:translate-x-0 pointer-events-none md:pointer-events-auto"
+        )}
       >
         <div className="p-6">
           <button
@@ -731,7 +775,7 @@ export default function CodeAnalysis() {
             </span>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Main Chat Workspace */}
       <div className="flex-1 flex flex-col relative bg-[#050505] min-w-0 overflow-hidden">
@@ -742,10 +786,39 @@ export default function CodeAnalysis() {
               <Terminal className="w-3 h-3" />
               Llama_3.3::Synchronized
             </span>
-            <div className="h-4 w-px bg-white/10" />
-            <span className="text-[10px] font-bold text-slate-400 truncate max-w-[300px] uppercase tracking-tighter">
+            <div className="h-4 w-px bg-white/10 hidden md:block" />
+            <span className="text-[10px] font-bold text-slate-400 truncate max-w-[300px] hidden md:block uppercase tracking-tighter">
               {activeSession ? activeSession.title : "New Architectural Review"}
             </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400"
+                title="History"
+              >
+                <HistoryIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="md:hidden">
+              <button
+                onClick={startNewAudit}
+                className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            {activeSession && (
+              <button
+                onClick={startNewAudit}
+                className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all flex items-center gap-2"
+                title="Close Session"
+              >
+                <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest">Close</span>
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 

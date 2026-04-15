@@ -113,6 +113,7 @@ const ChatInterface: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [isSessionsLoading, setIsSessionsLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<ChatAttachment[]>([]);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Edit State (Messages)
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -145,6 +146,32 @@ const ChatInterface: React.FC = () => {
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
+
+  // Restore active session on mount
+  useEffect(() => {
+    if (sessions.length > 0 && !activeChatId && messages.length === 0) {
+      if (typeof window !== "undefined") {
+        const savedChatId = localStorage.getItem("scopeai_active_chat");
+        if (savedChatId) {
+          const sessionToRestore = sessions.find((s) => s._id === savedChatId);
+          if (sessionToRestore) {
+            loadSession(sessionToRestore);
+          }
+        }
+      }
+    }
+  }, [sessions, activeChatId, messages.length]);
+
+  // Save active session to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (activeChatId) {
+        localStorage.setItem("scopeai_active_chat", activeChatId);
+      } else {
+        localStorage.removeItem("scopeai_active_chat");
+      }
+    }
+  }, [activeChatId]);
 
   const adjustHeight = (ref: React.RefObject<HTMLTextAreaElement | null>) => {
     if (ref.current) {
@@ -308,6 +335,9 @@ const ChatInterface: React.FC = () => {
     setInput("");
     setPendingFiles([]);
     setEditingIndex(null);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+       setIsMobileSidebarOpen(false);
+    }
   };
 
   const loadSession = async (session: ChatSession) => {
@@ -320,6 +350,9 @@ const ChatInterface: React.FC = () => {
         setMessages(data.messages);
         setActiveChatId(session._id as string);
         setEditingIndex(null);
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+           setIsMobileSidebarOpen(false);
+        }
       }
     } catch (err) {
       console.error("Failed to load session", err);
@@ -385,10 +418,22 @@ const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-64px)] flex flex-col relative">
+    <div className="w-full h-[calc(100dvh-64px)] flex flex-col relative">
       <div className="flex-1 flex flex-col bg-[#050505] overflow-hidden">
-        <div className="flex flex-col md:flex-row h-full">
-          <div className="hidden lg:flex w-72 border-r border-white/5 bg-[#080808] flex-col p-6 space-y-6">
+        <div className="flex flex-col md:flex-row h-full relative">
+          {/* Mobile Backdrop */}
+          {isMobileSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" 
+              onClick={() => setIsMobileSidebarOpen(false)} 
+            />
+          )}
+
+          {/* Sidebar */}
+          <div className={cn(
+            "flex flex-col fixed inset-y-0 left-0 z-50 lg:relative w-72 h-[calc(100dvh-64px)] lg:h-full border-r border-white/5 bg-[#080808] p-6 space-y-6 transition-transform duration-300",
+            isMobileSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full lg:translate-x-0 pointer-events-none lg:pointer-events-auto"
+          )}>
             <div className="space-y-4">
               <button
                 onClick={startNewChat}
@@ -510,13 +555,34 @@ const ChatInterface: React.FC = () => {
                     "Intellectual Workspace"}
                 </span>
               </div>
-              <div className="lg:hidden">
-                <button
-                  onClick={startNewChat}
-                  className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+              <div className="flex items-center gap-2">
+                <div className="lg:hidden">
+                  <button
+                    onClick={() => setIsMobileSidebarOpen(true)}
+                    className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400"
+                    title="History"
+                  >
+                    <History className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="lg:hidden">
+                  <button
+                    onClick={startNewChat}
+                    className="p-2 rounded-lg bg-white/5 border border-white/5 text-slate-400"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                {activeChatId && (
+                  <button
+                    onClick={startNewChat}
+                    className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all flex items-center gap-2"
+                    title="Close Session"
+                  >
+                    <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest">Close</span>
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 

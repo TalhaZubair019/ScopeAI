@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import AIProjectPlanner from "./components/AIProjectPlanner";
 import RecentProjects from "./components/RecentProjects";
@@ -28,6 +28,23 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Rehydrate state on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTab = localStorage.getItem("scopeai_active_tab") as TabType;
+      if (savedTab && ["planner", "analysis", "chat"].includes(savedTab)) {
+        setActiveTab(savedTab);
+      }
+    }
+  }, []);
+
+  // Save state on change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("scopeai_active_tab", activeTab);
+    }
+  }, [activeTab]);
+
   const handleProjectSaved = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
@@ -53,11 +70,11 @@ export default function Home() {
           </div>
 
           {/* New Tab Switcher */}
-          <div className="hidden md:flex items-center p-1 bg-white/5 border border-white/5 rounded-full">
+          <div className="flex items-center p-1 bg-white/5 border border-white/5 rounded-full overflow-x-auto scrollbar-hide max-w-[55vw] md:max-w-none">
             <button
               onClick={() => setActiveTab("planner")}
               className={cn(
-                "px-6 py-2 rounded-full text-sm font-bold transition-all relative flex items-center gap-2",
+                "px-3 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold transition-all relative flex items-center gap-1.5 md:gap-2 whitespace-nowrap",
                 activeTab === "planner"
                   ? "text-black"
                   : "text-slate-400 hover:text-white",
@@ -76,7 +93,7 @@ export default function Home() {
             <button
               onClick={() => setActiveTab("analysis")}
               className={cn(
-                "px-6 py-2 rounded-full text-sm font-bold transition-all relative flex items-center gap-2",
+                "px-3 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold transition-all relative flex items-center gap-1.5 md:gap-2 whitespace-nowrap",
                 activeTab === "analysis"
                   ? "text-black"
                   : "text-slate-400 hover:text-white",
@@ -95,7 +112,7 @@ export default function Home() {
             <button
               onClick={() => setActiveTab("chat")}
               className={cn(
-                "px-6 py-2 rounded-full text-sm font-bold transition-all relative flex items-center gap-2",
+                "px-3 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold transition-all relative flex items-center gap-1.5 md:gap-2 whitespace-nowrap",
                 activeTab === "chat"
                   ? "text-black"
                   : "text-slate-400 hover:text-white",
