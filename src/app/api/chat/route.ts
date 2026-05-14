@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import { PDFParse } from "pdf-parse";
 import { fetchWebContent } from "@/lib/webReader";
 import { fetchGroq } from "@/lib/groq";
+import { getAuthUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -29,17 +30,20 @@ async function parseDocument(attachment: ChatAttachment): Promise<string> {
 
 export async function GET(req: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const client = await clientPromise;
     const db = client.db("ScopeAI");
 
     if (id) {
-      const chat = await db.collection("chats").findOne({ _id: new ObjectId(id) });
+      const chat = await db.collection("chats").findOne({ _id: new ObjectId(id), userId: user.id });
       return NextResponse.json(chat);
     }
 
-    const chats = await db.collection("chats").find({}).project({ messages: 0 }).sort({ updatedAt: -1 }).toArray();
+    const chats = await db.collection("chats").find({ userId: user.id }).project({ messages: 0 }).sort({ updatedAt: -1 }).toArray();
     return NextResponse.json(chats);
   } catch (error) {
     return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
@@ -48,6 +52,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { messages, chatId, title } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
@@ -144,13 +151,14 @@ export async function POST(req: NextRequest) {
             max_tokens: 20,
             temperature: 0.3,
           });
-          newTitle = titleData.choices[0].message.content.trim() || "Intellectual Session";
+          newTitle = titleData.choices[0].message.content.trim() || "New Chat";
         } catch (e) {
           newTitle = messages[0].content.slice(0, 30) + "...";
         }
       }
 
       const result = await db.collection("chats").insertOne({
+        userId: user.id,
         title: newTitle,
         messages: allMessages,
         createdAt: new Date().toISOString(),
@@ -159,7 +167,7 @@ export async function POST(req: NextRequest) {
       currentId = result.insertedId.toString();
     } else {
       await db.collection("chats").updateOne(
-        { _id: new ObjectId(chatId) },
+        { _id: new ObjectId(chatId), userId: user.id },
         { $set: { messages: allMessages, updatedAt: new Date().toISOString() } }
       );
     }
@@ -174,13 +182,16 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
     const client = await clientPromise;
     const db = client.db("ScopeAI");
-    await db.collection("chats").deleteOne({ _id: new ObjectId(id) });
+    await db.collection("chats").deleteOne({ _id: new ObjectId(id), userId: user.id });
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
@@ -188,13 +199,16 @@ export async function DELETE(req: NextRequest) {
 }
 export async function PATCH(req: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { id, title } = await req.json();
     if (!id || !title) return NextResponse.json({ error: "ID and Title required" }, { status: 400 });
 
     const client = await clientPromise;
     const db = client.db("ScopeAI");
     await db.collection("chats").updateOne(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id), userId: user.id },
       { $set: { title, updatedAt: new Date().toISOString() } }
     );
     return NextResponse.json({ success: true });

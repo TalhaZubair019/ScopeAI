@@ -1,22 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const client = await clientPromise;
     const db = client.db("ScopeAI");
 
     const session = await db.collection("audit_sessions").findOne({
       _id: new ObjectId(id),
+      userId: user.id,
     });
 
     if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json({ error: "Session not found or access denied" }, { status: 404 });
     }
 
     return NextResponse.json(session);
@@ -34,16 +41,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const client = await clientPromise;
     const db = client.db("ScopeAI");
 
     const result = await db.collection("audit_sessions").deleteOne({
       _id: new ObjectId(id),
+      userId: user.id,
     });
 
     if (result.deletedCount === 0) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json({ error: "Session not found or access denied" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
@@ -61,6 +74,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const { title } = await req.json();
 
@@ -72,12 +90,12 @@ export async function PATCH(
     const db = client.db("ScopeAI");
 
     const result = await db.collection("audit_sessions").updateOne(
-      { _id: new ObjectId(id) },
+      { _id: new ObjectId(id), userId: user.id },
       { $set: { title, updatedAt: new Date() } }
     );
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json({ error: "Session not found or access denied" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, title });

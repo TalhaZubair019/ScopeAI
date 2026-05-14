@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import AIProjectPlanner from "./components/AIProjectPlanner";
 import RecentProjects from "./components/RecentProjects";
@@ -13,6 +14,8 @@ import {
   LayoutGrid,
   MessageSquareText,
   ShieldCheck,
+  LogOut,
+  User as UserIcon,
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -24,24 +27,50 @@ function cn(...inputs: ClassValue[]) {
 type TabType = "planner" | "analysis" | "chat";
 
 export default function Home() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("planner");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   // Rehydrate state on mount
   useEffect(() => {
+    // Fetch user info
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated) {
+          setUser(data.user);
+        }
+      })
+      .catch((err) => console.error("Failed to load user", err));
+
     if (typeof window !== "undefined") {
-      const savedTab = localStorage.getItem("scopeai_active_tab") as TabType;
-      if (savedTab && ["planner", "analysis", "chat"].includes(savedTab)) {
-        setActiveTab(savedTab);
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTab = urlParams.get("tab") as TabType;
+      if (urlTab && ["planner", "analysis", "chat"].includes(urlTab)) {
+        setActiveTab(urlTab);
+      } else {
+        const savedTab = localStorage.getItem("scopeai_active_tab") as TabType;
+        if (savedTab && ["planner", "analysis", "chat"].includes(savedTab)) {
+          setActiveTab(savedTab);
+        }
       }
     }
   }, []);
 
-  // Save state on change
+  // Save state to URL and localStorage on change
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("scopeai_active_tab", activeTab);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", activeTab);
+      
+      // Clean up inactive parameters to keep URL sharp and clean
+      if (activeTab !== "chat") url.searchParams.delete("chatId");
+      if (activeTab !== "analysis") url.searchParams.delete("auditId");
+      
+      window.history.replaceState(null, "", url.toString());
     }
   }, [activeTab]);
 
@@ -55,22 +84,32 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
   return (
     <div className="relative font-outfit">
       {/* Header / Nav Decor */}
       <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#030303]/60 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
               <PlusCircle className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-white to-white/60">
+            <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-linear-to-r from-white to-white/60 hidden md:inline-block">
               ScopeAI
             </span>
           </div>
 
           {/* New Tab Switcher */}
-          <div className="flex items-center p-1 bg-white/5 border border-white/5 rounded-full overflow-x-auto scrollbar-hide max-w-[55vw] md:max-w-none">
+          <div className="flex items-center p-1 bg-white/5 border border-white/5 rounded-full overflow-x-auto scrollbar-hide max-w-[65vw]">
             <button
               onClick={() => setActiveTab("planner")}
               className={cn(
@@ -129,13 +168,34 @@ export default function Home() {
               <span className="relative z-10">Chat</span>
             </button>
           </div>
+
+          {/* User Profile & Logout Actions */}
+          <div className="flex items-center gap-3 shrink-0">
+            {user && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/2 border border-white/5 rounded-lg">
+                <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                  <UserIcon className="w-3 h-3 text-indigo-400" />
+                </div>
+                <span className="text-xs font-bold text-slate-300 max-w-[100px] truncate uppercase tracking-widest">
+                  {user.name.split(" ")[0]}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={handleLogout}
+              title="Log Out"
+              className="p-2 rounded-lg bg-white/5 border border-white/5 hover:bg-red-500/10 hover:border-red-500/20 text-slate-400 hover:text-red-400 transition-all group"
+            >
+              <LogOut className="w-4 h-4 group-active:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
         </div>
       </nav>
 
       <main
         className={cn(
           "relative z-10 flex flex-col items-center",
-          activeTab === "planner" ? "pt-8 md:pt-16 pb-24" : "pt-0 pb-0",
+          activeTab === "planner" ? "pt-2 md:pt-4 pb-12" : "pt-0 pb-0",
         )}
       >
         {/* Main Content Area with Transitions */}
@@ -155,7 +215,7 @@ export default function Home() {
                   onProjectSaved={handleProjectSaved}
                 />
 
-                <div className="w-full max-w-7xl px-6 my-16">
+                <div className="w-full max-w-7xl px-6 my-8">
                   <div className="flex items-center gap-3 mb-8">
                     <History className="w-5 h-5 text-indigo-400" />
                     <h2 className="text-2xl font-bold text-white">

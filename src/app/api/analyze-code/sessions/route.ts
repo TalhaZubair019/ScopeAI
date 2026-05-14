@@ -2,15 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { CodeAuditSession } from "@/lib/types";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const client = await clientPromise;
     const db = client.db("ScopeAI");
 
     const sessions = await db
       .collection("audit_sessions")
-      .find({})
+      .find({ userId: user.id })
       .sort({ updatedAt: -1 })
       .toArray();
 
@@ -26,13 +32,19 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const sessionData: Partial<CodeAuditSession> = await req.json();
     const client = await clientPromise;
     const db = client.db("ScopeAI");
 
     const { _id, ...updateData } = sessionData;
     
-    // Set timestamps
+    // Attach ownership and timestamps
+    updateData.userId = user.id;
     const now = new Date();
     if (!_id) {
       updateData.createdAt = now;
@@ -41,12 +53,12 @@ export async function POST(req: NextRequest) {
 
     if (_id) {
       const result = await db.collection("audit_sessions").updateOne(
-        { _id: new ObjectId(_id) },
+        { _id: new ObjectId(_id), userId: user.id },
         { $set: updateData }
       );
       
       if (result.matchedCount === 0) {
-        return NextResponse.json({ error: "Session not found" }, { status: 404 });
+        return NextResponse.json({ error: "Session not found or access denied" }, { status: 404 });
       }
       
       return NextResponse.json({ _id, ...updateData });

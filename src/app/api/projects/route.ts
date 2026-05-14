@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const client = await clientPromise;
     const db = client.db("ScopeAI");
 
     const projects = await db
       .collection("projects")
-      .find({})
+      .find({ userId: user.id })
       .sort({ createdAt: -1 })
       .limit(12)
       .toArray();
@@ -26,6 +30,9 @@ export async function GET() {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -41,6 +48,7 @@ export async function DELETE(req: NextRequest) {
 
     const result = await db.collection("projects").deleteOne({
       _id: new ObjectId(id),
+      userId: user.id,
     });
 
     if (result.deletedCount === 0) {

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { getAuthUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { prompt, tasks, flowchart } = await req.json();
 
     if (!prompt || !tasks || !Array.isArray(tasks)) {
@@ -16,6 +20,7 @@ export async function POST(req: NextRequest) {
     const db = client.db("ScopeAI");
 
     const project = {
+      userId: user.id,
       prompt,
       tasks,
       flowchart,

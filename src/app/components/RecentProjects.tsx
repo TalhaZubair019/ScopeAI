@@ -69,7 +69,7 @@ const RecentProjects: React.FC<RecentProjectsProps> = ({
       <div className="flex flex-col items-center justify-center py-20 px-6 rounded-3xl bg-white/2 border border-dashed border-white/10">
         <FolderLock className="w-12 h-12 text-slate-700 mb-4" />
         <p className="text-slate-500 font-light max-w-xs text-center">
-          No project artifacts archived yet. Start a new plan to begin your
+          No projects saved yet. Start a new plan to begin your
           collection.
         </p>
       </div>
@@ -121,7 +121,7 @@ const RecentProjects: React.FC<RecentProjectsProps> = ({
                 </h3>
 
                 <p className="text-slate-500 text-sm font-medium flex items-center gap-2 mb-6">
-                  {project.tasks.length} Modules Architecturalized
+                  {project.tasks.length} Tasks Planned
                 </p>
               </div>
 
@@ -139,7 +139,7 @@ const RecentProjects: React.FC<RecentProjectsProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1 text-xs font-bold text-indigo-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-2 transition-all">
-                  Load Blueprint <ArrowUpRight className="w-3 h-3" />
+                  View Project <ArrowUpRight className="w-3 h-3" />
                 </div>
               </div>
             </div>

@@ -39,6 +39,7 @@ export interface ChatResponse {
 
 export interface ChatSession {
   _id?: string;
+  userId?: string;
   title: string;
   messages: ChatMessage[];
   createdAt: string;
@@ -47,6 +48,7 @@ export interface ChatSession {
 
 export interface CodeAuditSession {
   _id?: string;
+  userId?: string;
   title: string;
   messages: ChatMessage[];
   createdAt: string | Date;

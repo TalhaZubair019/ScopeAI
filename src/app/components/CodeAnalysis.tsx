@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bot,
   X,
   Activity,
   Zap,
@@ -18,10 +17,10 @@ import {
   Plus,
   Send,
   ShieldCheck,
-  Terminal,
   Trash2,
   User,
   History as HistoryIcon,
+  Bot,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -164,9 +163,9 @@ const UserMessageContent = ({
           <div className="absolute top-0 right-0 p-2 opacity-10">
             <ShieldCheck className="w-12 h-12 text-emerald-500/20" />
           </div>
-          <div className="flex items-center gap-2 text-[9px] font-bold text-emerald-600 uppercase tracking-[0.2em] relative z-10">
+          <div className="flex items-center gap-2 text-[9px] font-semibold text-emerald-600 uppercase tracking-wider relative z-10">
             <Edit3 className="w-3 h-3" />
-            Applied_Custom_Rules
+            Custom Rules Applied
           </div>
           <div className="pl-4 border-l border-emerald-500/30">
             <p className="text-[12px] font-mono text-emerald-700 leading-relaxed italic relative z-10">
@@ -188,7 +187,7 @@ const UserMessageContent = ({
             <button
               onClick={onEdit}
               className="px-3 py-1.5 rounded-lg border border-black/10 bg-black/5 text-black/50 hover:text-black hover:bg-black/10 transition-all flex items-center gap-2 backdrop-blur-md group/edit-btn shadow-xs"
-              title="Neural Re-edit"
+              title="Edit code"
             >
               <Edit3 className="w-3.5 h-3.5 group-hover/edit-btn:rotate-12 transition-transform" />
               <span className="text-[9px] font-bold uppercase tracking-widest leading-none">
@@ -236,7 +235,6 @@ export default function CodeAnalysis() {
   const [editTitle, setEditTitle] = useState("");
   const [sessionToDelete, setSessionToDelete] =
     useState<CodeAuditSession | null>(null);
-  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [customLogic, setCustomLogic] = useState("");
   const [isFixing, setIsFixing] = useState<string | null>(null);
   const [requestedDepPath, setRequestedDepPath] = useState<string | null>(null);
@@ -248,21 +246,6 @@ export default function CodeAnalysis() {
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        formRef.current &&
-        !formRef.current.contains(event.target as Node) &&
-        isInputExpanded
-      ) {
-        setIsInputExpanded(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isInputExpanded]);
-
-  useEffect(() => {
     fetchSessions();
   }, []);
 
@@ -270,7 +253,10 @@ export default function CodeAnalysis() {
   useEffect(() => {
     if (sessions.length > 0 && !activeSession && messages.length === 0) {
       if (typeof window !== "undefined") {
-        const savedAuditId = localStorage.getItem("scopeai_active_audit");
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlAuditId = urlParams.get("auditId");
+        const savedAuditId = urlAuditId || localStorage.getItem("scopeai_active_audit");
+        
         if (savedAuditId) {
           const sessionToRestore = sessions.find((s) => s._id === savedAuditId);
           if (sessionToRestore) {
@@ -281,14 +267,18 @@ export default function CodeAnalysis() {
     }
   }, [sessions, activeSession, messages.length]);
 
-  // Save active session to localStorage
+  // Save active session to localStorage and URL
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
       if (activeSession?._id) {
         localStorage.setItem("scopeai_active_audit", activeSession._id);
+        url.searchParams.set("auditId", activeSession._id);
       } else {
         localStorage.removeItem("scopeai_active_audit");
+        url.searchParams.delete("auditId");
       }
+      window.history.replaceState(null, "", url.toString());
     }
   }, [activeSession]);
 
@@ -309,15 +299,17 @@ export default function CodeAnalysis() {
   };
 
   const startNewAudit = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("scopeai_active_audit");
+    }
     setActiveSession(null);
     setMessages([]);
     setInput("");
     setPendingFiles([]);
     setError(null);
-    setIsInputExpanded(false);
     setCustomLogic("");
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-       setIsMobileSidebarOpen(false);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsMobileSidebarOpen(false);
     }
   };
 
@@ -327,10 +319,9 @@ export default function CodeAnalysis() {
     setInput("");
     setPendingFiles([]);
     setError(null);
-    setIsInputExpanded(false);
     setCustomLogic("");
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-       setIsMobileSidebarOpen(false);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsMobileSidebarOpen(false);
     }
   };
 
@@ -374,7 +365,6 @@ export default function CodeAnalysis() {
 
   const handleAnalyze = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!isInputExpanded) return;
     if (!input.trim() && pendingFiles.length === 0) return;
 
     const userMessage: ChatMessage = {
@@ -390,7 +380,6 @@ export default function CodeAnalysis() {
     setError(null);
     setInput("");
     setPendingFiles([]);
-    setIsInputExpanded(false);
 
     try {
       const response = await fetch("/api/analyze-code", {
@@ -422,7 +411,7 @@ export default function CodeAnalysis() {
         (userMessage.attachments?.[0]
           ? userMessage.attachments[0].name
           : userMessage.content.split("\n")[0].substring(0, 30)) ||
-        "Code Audit";
+        "Code Analysis";
 
       const sessionPayload = {
         _id: activeSession?._id,
@@ -448,7 +437,7 @@ export default function CodeAnalysis() {
           "Capacity Reached. Please wait a few minutes before the next analysis.",
         );
       } else {
-        setError(msg || "Audit engine interrupted.");
+        setError(msg || "Analysis failed.");
       }
       setMessages(updatedMessages);
     } finally {
@@ -461,7 +450,6 @@ export default function CodeAnalysis() {
     setInput(msg.content);
     setCustomLogic(msg.customRules || "");
     setPendingFiles(msg.attachments || []);
-    setIsInputExpanded(true);
 
     // Find the index of this message and slice the history
     const messageIndex = messages.findIndex((m) => m === msg);
@@ -610,7 +598,7 @@ export default function CodeAnalysis() {
           });
         }
       } catch (err: any) {
-        setError(err.message || "Audit engine interrupted.");
+        setError(err.message || "Analysis failed.");
         setMessages(updatedMessages);
       } finally {
         setIsAnalyzing(false);
@@ -663,38 +651,40 @@ export default function CodeAnalysis() {
     <div className="w-full flex h-[calc(100dvh-80px)] overflow-hidden relative">
       {/* Mobile Backdrop */}
       {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm" 
-          onClick={() => setIsMobileSidebarOpen(false)} 
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div
         className={cn(
-          "flex flex-col fixed inset-y-0 left-0 z-50 md:relative h-full bg-black/40 border-r border-white/5 overflow-hidden transition-all duration-300",
-          isSidebarOpen ? "w-[280px]" : "w-0",
-          isMobileSidebarOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full md:translate-x-0 pointer-events-none md:pointer-events-auto"
+          "flex flex-col fixed inset-y-0 left-0 z-50 md:relative h-full bg-black/20 border-r border-white/5 overflow-hidden transition-all duration-300",
+          isSidebarOpen ? "w-[260px]" : "w-0",
+          isMobileSidebarOpen
+            ? "translate-x-0 pointer-events-auto"
+            : "-translate-x-full md:translate-x-0 pointer-events-none md:pointer-events-auto",
         )}
       >
-        <div className="p-6">
+        <div className="p-4">
           <button
             onClick={startNewAudit}
-            className="w-full py-3.5 rounded-xl bg-white text-black font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all shadow-[0_0_20px_rgba(255,255,255,0.05)] active:scale-95"
+            className="w-full py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-neutral-200 font-medium flex items-center justify-center gap-2 transition-all active:scale-98"
           >
             <Plus className="w-4 h-4" />
-            <span className="text-xs">New Audit</span>
+            <span className="text-xs">New Analysis</span>
           </button>
         </div>
 
-        <div className="px-6 py-2">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">
+        <div className="px-5 py-1">
+          <div className="flex items-center gap-2 text-[9px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">
             <HistoryIcon className="w-3 h-3" />
-            SESSIONS
+            History
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-3 py-1 space-y-0.5 scrollbar-hide">
           <AnimatePresence mode="popLayout">
             {sessions.map((session) => (
               <motion.div
@@ -704,18 +694,18 @@ export default function CodeAnalysis() {
                 exit={{ opacity: 0, x: -10 }}
                 onClick={() => loadSession(session)}
                 className={cn(
-                  "group relative p-3 rounded-lg cursor-pointer transition-all flex items-center gap-3",
+                  "group relative p-2.5 rounded-lg cursor-pointer transition-all flex items-center gap-3",
                   activeSession?._id === session._id
-                    ? "bg-white/10 text-white"
-                    : "text-slate-500 hover:text-slate-300 hover:bg-white/5",
+                    ? "bg-white/5 text-white"
+                    : "text-neutral-500 hover:text-neutral-300 hover:bg-white/5",
                 )}
               >
                 <div
                   className={cn(
-                    "p-1.5 rounded-md",
+                    "p-1 rounded-md",
                     activeSession?._id === session._id
-                      ? "bg-white/10"
-                      : "bg-white/5",
+                      ? "bg-white/5 text-white"
+                      : "text-neutral-500",
                   )}
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
@@ -765,30 +755,15 @@ export default function CodeAnalysis() {
             ))}
           </AnimatePresence>
         </div>
-
-        <div className="p-6 border-t border-white/5 bg-black/20">
-          <div className="flex items-center justify-between text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-            <span>Audit Engine</span>
-            <span className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-              Active
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Main Chat Workspace */}
-      <div className="flex-1 flex flex-col relative bg-[#050505] min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col relative bg-[#030303] min-w-0 overflow-hidden">
         {/* Workspace Header */}
-        <div className="px-8 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20">
+        <div className="px-6 py-3.5 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-md relative z-20">
           <div className="flex items-center gap-4">
-            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
-              <Terminal className="w-3 h-3" />
-              Llama_3.3::Synchronized
-            </span>
-            <div className="h-4 w-px bg-white/10 hidden md:block" />
-            <span className="text-[10px] font-bold text-slate-400 truncate max-w-[300px] hidden md:block uppercase tracking-tighter">
-              {activeSession ? activeSession.title : "New Architectural Review"}
+            <span className="text-xs font-medium text-neutral-300 flex items-center gap-2">
+              {activeSession ? activeSession.title : "New Analysis"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -815,64 +790,28 @@ export default function CodeAnalysis() {
                 className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all flex items-center gap-2"
                 title="Close Session"
               >
-                <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest">Close</span>
+                <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest">
+                  Close
+                </span>
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
         </div>
 
-        {/* Global Grid Overlay */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-20">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern
-                id="grid"
-                width="40"
-                height="40"
-                patternUnits="userSpaceOnUse"
-              >
-                <path
-                  d="M 40 0 L 0 0 0 40"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="0.5"
-                  strokeOpacity="0.1"
-                />
-                <circle cx="0" cy="0" r="1" fill="white" fillOpacity="0.2" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-          <motion.div
-            animate={{ y: ["0%", "100%", "0%"] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute top-0 left-0 w-full h-[30%] bg-linear-to-b from-emerald-500/5 to-transparent pointer-events-none"
-          />
-        </div>
-
         {/* Message List */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-12 space-y-8 scrollbar-hide relative z-10">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 md:px-12 py-5 space-y-6 scrollbar-hide relative z-10">
           {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center space-y-8">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative shadow-2xl"
-              >
-                <div className="absolute inset-0 bg-emerald-500/10 rounded-2xl blur-2xl opacity-20" />
-                <Bot className="w-8 h-8 text-white/40 relative z-10" />
-              </motion.div>
-              <div className="text-center space-y-3">
-                <h1 className="text-4xl font-bold text-white tracking-tight">
-                  Code Audit{" "}
-                  <span className="text-slate-600 font-light text-2xl">
-                    Forensics
-                  </span>
+            <div className="h-full flex flex-col items-center justify-center space-y-6">
+              <div className="w-12 h-12 rounded-xl bg-neutral-900/80 border border-neutral-800 flex items-center justify-center shadow-sm">
+                <FileCode className="w-5 h-5 text-neutral-400" />
+              </div>
+              <div className="text-center space-y-2">
+                <h1 className="text-2xl font-medium text-white tracking-tight">
+                  Code Analysis Workspace
                 </h1>
-                <p className="text-slate-500 text-sm max-w-sm mx-auto font-light leading-relaxed">
-                  Initialize a structural sweep by pasting source code or
-                  uploading architectural components.
+                <p className="text-neutral-500 text-sm max-w-sm mx-auto font-normal leading-relaxed">
+                  Paste source code or upload files to run a new review.
                 </p>
               </div>
             </div>
@@ -911,9 +850,7 @@ export default function CodeAnalysis() {
                   )}
                 >
                   <div className="flex items-center gap-2 mb-2 px-1 text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-                    {message.role === "user"
-                      ? "Requestor::Client"
-                      : "Auditor::Llama_3.3_70B"}
+                    {message.role === "user" ? "You" : "ScopeAI"}
                   </div>
 
                   <div
@@ -1160,7 +1097,7 @@ export default function CodeAnalysis() {
                                     <Zap className="w-4 h-4 group-hover/fixall:scale-110 transition-transform" />
                                   )}
                                   {isFixing === "FIX_ALL"
-                                    ? "Synthesizing Master Fix..."
+                                    ? "Generating fix..."
                                     : "Fix All Issues Simultaneously"}
                                 </button>
                               </div>
@@ -1173,12 +1110,12 @@ export default function CodeAnalysis() {
                         {message.content.includes("[SCORES]:") && (
                           <div className="mt-12 pt-8 border-t border-white/10 space-y-12">
                             <div className="flex items-center justify-between mb-8">
-                              <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                                 <Activity className="w-4 h-4 text-emerald-500" />
-                                Diagnostics Verdict
+                                Analysis Summary
                               </h3>
-                              <span className="text-[10px] font-mono text-slate-600">
-                                ENGINE_RATING::STABLE
+                              <span className="text-[10px] font-medium text-slate-500">
+                                Status: Optimal
                               </span>
                             </div>
 
@@ -1202,13 +1139,13 @@ export default function CodeAnalysis() {
                                       </div>
 
                                       <div className="col-span-1 border-r border-white/5 pr-8">
-                                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">
-                                          Total_Integrity
+                                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                                          Overall Quality
                                         </p>
                                         <div className="flex items-baseline gap-2">
                                           <span
                                             className={cn(
-                                              "text-5xl font-mono font-bold tracking-tighter",
+                                              "text-5xl font-bold tracking-tight",
                                               totalScore >= 80
                                                 ? "text-emerald-500"
                                                 : totalScore >= 50
@@ -1218,14 +1155,14 @@ export default function CodeAnalysis() {
                                           >
                                             {totalScore}
                                           </span>
-                                          <span className="text-slate-600 font-mono text-sm">
+                                          <span className="text-slate-600 text-sm">
                                             / 100
                                           </span>
                                         </div>
                                       </div>
 
                                       <div className="col-span-2 pl-4">
-                                        <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 mb-4">
+                                        <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 mb-4">
                                           <motion.div
                                             initial={{ width: 0 }}
                                             animate={{
@@ -1238,16 +1175,16 @@ export default function CodeAnalysis() {
                                             className={cn(
                                               "h-full rounded-full",
                                               totalScore >= 80
-                                                ? "bg-emerald-500 shadow-[0_0_15px_#10b981]"
+                                                ? "bg-emerald-500"
                                                 : totalScore >= 50
-                                                  ? "bg-amber-500 shadow-[0_0_15px_#f59e0b]"
-                                                  : "bg-red-500 shadow-[0_0_15px_#ef4444]",
+                                                  ? "bg-amber-500"
+                                                  : "bg-red-500",
                                             )}
                                           />
                                         </div>
-                                        <p className="text-[11px] text-slate-500 leading-relaxed font-light">
-                                          Structural integrity is currently
-                                          rated as{" "}
+                                        <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
+                                          The structural code quality is
+                                          currently rated as{" "}
                                           <span className="text-white font-bold">
                                             {totalScore >= 80
                                               ? "STABLE"
@@ -1255,26 +1192,25 @@ export default function CodeAnalysis() {
                                                 ? "DEGRADED"
                                                 : "CRITICAL"}
                                           </span>
-                                          . The diagnostic engine has calculated
-                                          this score based on 4 independent
-                                          technical metrics.
+                                          . This assessment is calculated from
+                                          four core engineering health metrics.
                                         </p>
                                       </div>
                                     </div>
 
                                     <div className="space-y-6">
-                                      <p className="text-[9px] font-bold text-slate-700 uppercase tracking-[0.2em] mb-4">
-                                        Tactical_Decomposition
+                                      <p className="text-[9px] font-semibold text-slate-600 uppercase tracking-wider mb-4">
+                                        Detailed Analysis
                                       </p>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                                         <ScoreBar
-                                          label="Security_Surface"
+                                          label="Security"
                                           score={scores.Security}
                                           icon={Lock}
                                           color="text-emerald-500"
                                         />
                                         <ScoreBar
-                                          label="Performance_Load"
+                                          label="Performance"
                                           score={scores.Performance}
                                           icon={Zap}
                                           color="text-cyan-500"
@@ -1286,7 +1222,7 @@ export default function CodeAnalysis() {
                                           color="text-purple-500"
                                         />
                                         <ScoreBar
-                                          label="Structural_Stability"
+                                          label="Reliability"
                                           score={scores.Reliability}
                                           icon={Activity}
                                           color="text-rose-500"
@@ -1319,94 +1255,83 @@ export default function CodeAnalysis() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-                    Auditor::Synthesizing
+                    Analyzing...
                   </div>
                   <div className="px-6 py-4 rounded-2xl bg-white/2 border border-white/5 rounded-tl-none flex items-center gap-4">
                     <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
                     <span className="text-xs text-slate-400 font-mono italic">
-                      Performing code sweep...
+                      Analyzing code...
                     </span>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-          <div
-            ref={scrollRef}
-            className={cn(
-              "transition-all duration-300 shrink-0",
-              isInputExpanded ? "h-64" : "h-24",
-            )}
-          />
+          <div ref={scrollRef} className="h-4 shrink-0" />
         </div>
 
-        {/* Floating Chat Input Bar */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-20 pointer-events-none">
-          <div
-            className={cn(
-              "max-w-4xl mx-auto relative group pointer-events-auto",
-              !isInputExpanded && "flex justify-end",
-            )}
-          >
-            {isInputExpanded && (
-              <div className="absolute -inset-0.5 bg-linear-to-r from-emerald-500/20 to-teal-500/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            )}
-
+        {/* Grounded Chat Input Bar */}
+        <div className="p-4 md:py-4 md:px-6 shrink-0 bg-[#030303] border-t border-white/5">
+          <div className="max-w-4xl mx-auto">
             <form
               ref={formRef}
               onSubmit={handleAnalyze}
-              className={cn(
-                "relative transition-all duration-300",
-                isInputExpanded
-                  ? "bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-3xl overflow-hidden w-full"
-                  : "w-auto",
-              )}
+              className="relative bg-neutral-900/40 border border-neutral-800 rounded-xl shadow-xl overflow-hidden w-full focus-within:border-neutral-700 transition-all duration-300"
             >
               {pendingFiles.length > 0 && (
-                <div className="px-6 py-4 border-b border-white/5 bg-white/2 flex flex-wrap gap-3">
+                <div className="px-4 py-3 border-b border-neutral-800 bg-black/20 flex flex-wrap gap-2.5">
                   {pendingFiles.map((file, idx) => (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       key={`${file.name}-${idx}`}
-                      className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg group/chip shadow-lg shadow-emerald-500/5 rotate-0 hover:-rotate-1 transition-transform"
+                      className="flex items-center gap-2 bg-neutral-800 border border-neutral-700 px-2.5 py-1 rounded-lg"
                     >
-                      <FileCode className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-[10px] font-bold text-white uppercase tracking-wider truncate max-w-[120px]">
+                      <FileCode className="w-3.5 h-3.5 text-neutral-400" />
+                      <span className="text-[10px] font-medium text-white truncate max-w-[120px]">
                         {file.name}
                       </span>
                       <button
                         type="button"
                         onClick={() => removePendingFile(idx)}
-                        className="p-1 hover:bg-emerald-500/20 rounded-md text-emerald-500/60 hover:text-red-400 transition-all"
+                        className="p-0.5 hover:bg-neutral-700 rounded text-neutral-500 hover:text-neutral-300"
                       >
                         <X className="w-3 h-3" />
                       </button>
                     </motion.div>
                   ))}
                   <div className="flex-1 flex items-center justify-end">
-                    <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-                      {pendingFiles.length} / 10 Files Batch
+                    <span className="text-[9px] font-medium text-neutral-500 uppercase tracking-wider">
+                      {pendingFiles.length} / 10 Files
                     </span>
                   </div>
                 </div>
               )}
 
-              <div
-                className={cn(
-                  "flex items-end gap-2",
-                  isInputExpanded ? "p-4" : "",
-                )}
-              >
-                {isInputExpanded && (
+              <div className="flex flex-col gap-1.5 p-3">
+                <div className="flex items-center gap-2 px-1">
+                  <Edit3 className="w-3 h-3 text-neutral-600" />
+                  <input
+                    type="text"
+                    value={customLogic}
+                    onChange={(e) => setCustomLogic(e.target.value)}
+                    placeholder="Custom validation rules (optional)..."
+                    className="w-full bg-transparent border-none outline-none focus:ring-0 text-neutral-400 placeholder-neutral-600 text-xs py-0.5"
+                    disabled={isAnalyzing}
+                  />
+                </div>
+
+                <div className="h-px bg-neutral-800 w-full my-0.5" />
+
+                <div className="flex items-end gap-3">
                   <div className="flex flex-col gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="p-3 rounded-xl hover:bg-white/5 text-slate-500 hover:text-white transition-all border border-transparent hover:border-white/10"
-                      title="Upload Architectural Component"
+                      className="p-2.5 rounded-lg hover:bg-neutral-800 text-neutral-500 hover:text-neutral-300 transition-colors border border-transparent hover:border-neutral-700"
+                      title="Upload Code Files"
                     >
-                      <Paperclip className="w-5 h-5" />
+                      <Paperclip className="w-4 h-4" />
                     </button>
                     <input
                       type="file"
@@ -1424,91 +1349,46 @@ export default function CodeAnalysis() {
                       accept=".ts,.tsx,.js,.jsx,.py,.go,.java,.c,.cpp,.rs,.json"
                     />
                   </div>
-                )}
 
-                {isInputExpanded && (
-                  <div className="flex flex-col flex-1 gap-2 pt-1">
-                    <div className="flex items-center gap-2 group/logic px-1">
-                      <Edit3 className="w-3 h-3 text-amber-500/50 group-focus-within/logic:text-amber-500 transition-colors" />
-                      <input
-                        type="text"
-                        value={customLogic}
-                        onChange={(e) => setCustomLogic(e.target.value)}
-                        placeholder="Custom Validation Rules (Optional)..."
-                        className="w-full bg-transparent border-none outline-none focus:ring-0 text-amber-500/80 placeholder-slate-700 text-xs font-mono py-1"
-                        disabled={isAnalyzing}
-                      />
-                    </div>
-                    <div className="h-px bg-linear-to-r from-white/10 via-white/5 to-transparent w-full" />
-                    <textarea
-                      ref={textareaRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleAnalyze();
-                        }
-                      }}
-                      placeholder="Paste source code or drop architectural files here..."
-                      className="w-full bg-transparent border-none outline-none focus:ring-0 text-slate-300 placeholder-slate-700 text-sm font-mono py-3 resize-none max-h-[200px] min-h-[44px] scrollbar-hide"
-                      disabled={isAnalyzing}
-                    />
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    if (!isInputExpanded) {
-                      e.preventDefault();
-                      setIsInputExpanded(true);
-                      setTimeout(() => textareaRef.current?.focus(), 100);
-                    } else {
-                      handleAnalyze();
-                    }
-                  }}
-                  disabled={
-                    isInputExpanded
-                      ? isAnalyzing ||
-                        (!input.trim() && pendingFiles.length === 0)
-                      : false
-                  }
-                  className={cn(
-                    "p-3 rounded-xl transition-all duration-300 active:scale-90",
-                    isInputExpanded &&
-                      (input.trim() || pendingFiles.length > 0) &&
-                      !isAnalyzing
-                      ? "bg-white text-black shadow-lg shadow-white/5"
-                      : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]",
-                    !isInputExpanded &&
-                      "w-14 h-14 flex items-center justify-center rounded-full",
-                  )}
-                >
-                  <Send
-                    className={cn(
-                      "transition-all",
-                      !isInputExpanded ? "w-6 h-6 ml-1" : "w-5 h-5",
-                    )}
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAnalyze();
+                      }
+                    }}
+                    placeholder="Paste source code or drop architectural files here..."
+                    className="w-full bg-transparent border-none outline-none focus:ring-0 text-neutral-300 placeholder-neutral-600 text-sm py-1.5 resize-none max-h-[180px] min-h-[36px] scrollbar-hide font-normal"
+                    disabled={isAnalyzing}
                   />
-                </button>
-              </div>
 
-              {isInputExpanded && (
-                <div className="flex items-center gap-4 px-6 py-2 bg-black/40 border-t border-white/5">
-                  <div className="flex gap-1">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-white/10"
-                      />
-                    ))}
-                  </div>
-                  <div className="text-[8px] font-mono text-slate-600 uppercase tracking-widest flex-1">
-                    Ready for Audit
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={
+                      isAnalyzing ||
+                      (!input.trim() && pendingFiles.length === 0)
+                    }
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0",
+                      isAnalyzing
+                        ? "bg-neutral-800 text-neutral-500"
+                        : "bg-white text-black hover:bg-neutral-200 active:scale-98",
+                    )}
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span className="hidden sm:inline">Analyze</span>
+                        <Send className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
+              </div>
             </form>
           </div>
         </div>

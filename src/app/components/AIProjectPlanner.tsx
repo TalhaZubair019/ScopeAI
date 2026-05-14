@@ -114,7 +114,7 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
         throw new Error(errorData.error || "Failed to save project");
       }
 
-      setSuccessMessage("Project architecture archived successfully.");
+      setSuccessMessage("Project saved successfully.");
       if (onProjectSaved) onProjectSaved();
     } catch (err: any) {
       setSaveError(err.message || "Failed to save project. Please try again.");
@@ -124,120 +124,98 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-5xl mx-auto py-12 px-6">
-      {/* Search Header */}
-      <div className="text-center mb-16 space-y-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-widest"
-        >
-          <Sparkles className="w-3 h-3" />
-          Powered by Intelligence
-        </motion.div>
-
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white leading-tight">
-          Architect Your <br />
-          <span className="bg-clip-text text-transparent bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400">
-            Next Big Idea
-          </span>
+    <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto pt-4 pb-8 px-6">
+      {/* Minimal Hero Section */}
+      <div className="text-center mb-8 space-y-2.5">
+        <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-white">
+          Plan your next project
         </h1>
 
-        <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-light">
-          Elevate your vision from a simple sentence to a comprehensive,
-          actionable technical roadmap instantly.
+        <p className="text-neutral-400 text-sm md:text-base max-w-xl mx-auto font-normal">
+          Describe your product goal and instantly map out a complete, actionable development plan.
         </p>
       </div>
 
-      {/* Input Section - The Command Center */}
-      <form onSubmit={handleGenerate} className="w-full max-w-3xl relative">
-        <div className="absolute -inset-0.5 bg-linear-to-r from-indigo-500/30 to-purple-500/30 rounded-3xl blur-xl opacity-50" />
-        <div className="relative bg-[#09090b]/80 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden shadow-3xl">
-          <div className="flex items-center gap-2 px-6 py-4 border-b border-white/5 bg-white/2">
-            <Terminal className="w-4 h-4 text-slate-500" />
-            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-              System::OmniScope_v4.0.1
-            </span>
-            <div className="ml-auto flex items-center gap-4">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-white/10">
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest hidden md:inline">
-                  Start Date::
+      {/* Streamlined Command Bar */}
+      <form onSubmit={handleGenerate} className="w-full max-w-2xl">
+        <div className="relative bg-neutral-900/40 border border-neutral-800 rounded-2xl overflow-hidden transition-all duration-300 focus-within:border-neutral-700 focus-within:bg-neutral-900/60 shadow-[0_2px_20px_rgba(0,0,0,0.3)]">
+          {/* Clean Options Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-neutral-800 bg-neutral-950/30">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-medium text-neutral-500 uppercase tracking-wider">
+                  Start Date:
                 </span>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-transparent text-[10px] text-indigo-400 outline-none cursor-pointer font-mono"
+                  className="bg-transparent text-xs text-indigo-400 hover:text-indigo-300 outline-none cursor-pointer transition-colors"
                 />
-              </div>
-              <button
-                type="button"
-                onClick={() => setSkipWeekends(!skipWeekends)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1 rounded-lg border transition-all",
-                  skipWeekends
-                    ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
-                    : "bg-white/5 border-white/10 text-slate-500 hover:bg-white/10",
-                )}
-              >
-                <div
-                  className={cn(
-                    "w-2 h-2 rounded-full transition-all",
-                    skipWeekends
-                      ? "bg-indigo-400 shadow-[0_0_8px_#818cf8]"
-                      : "bg-slate-700",
-                  )}
-                />
-                <span className="text-[9px] font-bold uppercase tracking-widest leading-none">
-                  Skip Weekends
-                </span>
-              </button>
-              <div className="flex gap-1.5 border-l border-white/5 pl-4 ml-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20" />
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20" />
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setSkipWeekends(!skipWeekends)}
+              className={cn(
+                "flex items-center gap-2 px-2.5 py-1 rounded-md border text-[10px] font-medium uppercase tracking-wider transition-all duration-200",
+                skipWeekends
+                  ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
+                  : "bg-neutral-800/50 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-300",
+              )}
+            >
+              <div
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full transition-all",
+                  skipWeekends ? "bg-indigo-400" : "bg-neutral-600",
+                )}
+              />
+              Skip Weekends
+            </button>
           </div>
 
+          {/* Prompt Input */}
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe your project goal... (e.g., 'A decentralized financial dashboard with real-time analytics and multi-wallet support.')"
-            className="w-full bg-transparent px-8 py-6 text-white placeholder-slate-600 outline-none focus:ring-0 text-xl min-h-[160px] resize-none font-light leading-relaxed"
+            placeholder="What are you building? (e.g. A modern SaaS dashboard with dark mode and Stripe integrations)"
+            className="w-full bg-transparent px-6 py-5 text-white placeholder-neutral-600 outline-none focus:ring-0 text-base min-h-[120px] resize-none font-normal leading-relaxed"
             disabled={isLoading}
           />
 
-          <div className="flex items-center justify-between p-4 px-8 border-t border-white/5 bg-white/2">
-            <div className="text-xs text-slate-500 flex items-center gap-2 font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              AI Engine Ready
+          {/* Action Footer */}
+          <div className="flex items-center justify-between p-4 px-6 border-t border-neutral-800 bg-neutral-950/20">
+            <div className="text-[11px] text-neutral-500 flex items-center gap-1.5">
+              <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isLoading ? "bg-indigo-500" : "bg-neutral-700")} />
+              {isLoading ? "Analyzing goals..." : "Ready to map"}
             </div>
 
             <button
               type="submit"
               disabled={isLoading || !prompt.trim()}
               className={cn(
-                "group relative overflow-hidden px-10 py-3 rounded-full font-bold transition-all duration-500 flex items-center gap-2 active:scale-95",
+                "px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed",
                 isLoading
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                  : "bg-white text-black hover:bg-slate-100 shadow-[0_0_20px_rgba(255,255,255,0.1)]",
+                  ? "bg-neutral-800 text-neutral-500"
+                  : "bg-white text-black hover:bg-neutral-200 active:scale-98",
               )}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
-                  <span>Synthesizing...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                  <span>Planning...</span>
                 </>
               ) : (
                 <>
-                  <span>Initialize Plan</span>
-                  <Send className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  <span>Generate Plan</span>
+                  <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </div>
         </div>
+
 
         <AnimatePresence>
           {error && (
@@ -274,11 +252,11 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
                     Project Architecture
                   </h2>
                   <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] uppercase font-bold tracking-widest">
-                    Optimized
+                    Generated
                   </div>
                 </div>
                 <p className="text-slate-500 text-lg font-light">
-                  Verification completed. Plan is ready for deployment.
+                  Your technical roadmap is ready.
                 </p>
               </div>
 
@@ -295,12 +273,12 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
                 {isSaving ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Archiving...</span>
+                    <span>Saving...</span>
                   </>
                 ) : (
                   <>
                     <Save className="w-5 h-5" />
-                    <span>Save Blueprint</span>
+                    <span>Save Project</span>
                     <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                   </>
                 )}
@@ -322,7 +300,7 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
                     </h3>
                   </div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">
-                    Architectural Visualization v4.2
+                    Project Map
                   </p>
                 </div>
                 <div className="h-px flex-[0.5] bg-white/5 ml-4" />
@@ -342,7 +320,7 @@ const AIProjectPlanner: React.FC<AIProjectPlannerProps> = ({
                   <div className="flex flex-col items-center gap-3 text-slate-500">
                     <LayoutGrid className="w-8 h-8 animate-pulse text-purple-500" />
                     <span className="text-[10px] font-bold uppercase tracking-widest">
-                      Flow Analysis Pending
+                      Diagram Pending
                     </span>
                   </div>
                 </div>
