@@ -30,19 +30,6 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Active Real-time Sync for Remember Me (Guarantees inputs are locked into storage immediately)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (rememberMe) {
-        if (email) localStorage.setItem("scopeai_remembered_email", email);
-        if (password) localStorage.setItem("scopeai_remembered_password", password);
-      } else {
-        localStorage.removeItem("scopeai_remembered_email");
-        localStorage.removeItem("scopeai_remembered_password");
-      }
-    }
-  }, [email, password, rememberMe]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -65,6 +52,17 @@ export default function LoginPage() {
           return;
         }
         throw new Error(data.error || "Authentication failed");
+      }
+
+      // 🔐 Safe Lock Step: Only persist/clear credentials upon an ACTUALLY SUCCESSFUL Login!
+      if (typeof window !== "undefined") {
+        if (rememberMe) {
+          localStorage.setItem("scopeai_remembered_email", email);
+          localStorage.setItem("scopeai_remembered_password", password);
+        } else {
+          localStorage.removeItem("scopeai_remembered_email");
+          localStorage.removeItem("scopeai_remembered_password");
+        }
       }
 
       router.push("/");
