@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { ChatMessage, ChatAttachment } from "@/lib/types";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import { PDFParse } from "pdf-parse";
 import { fetchWebContent } from "@/lib/webReader";
 import { fetchGroq } from "@/lib/groq";
 import { getAuthUser } from "@/lib/auth";
@@ -15,6 +14,10 @@ async function parseDocument(attachment: ChatAttachment): Promise<string> {
     const buffer = Buffer.from(base64Data, "base64");
 
     if (attachment.type === "application/pdf") {
+      if (typeof globalThis.DOMMatrix === "undefined") {
+        (globalThis as any).DOMMatrix = class DOMMatrix {};
+      }
+      const { PDFParse } = await import("pdf-parse");
       const parser = new PDFParse({ data: buffer });
       const data = await parser.getText();
       return `[File: ${attachment.name}]\n${data.text}\n`;
